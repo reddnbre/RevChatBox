@@ -26,13 +26,13 @@ html[data-theme="dark"]{
   --glass-inner-shadow: inset 0 1px 0 rgba(255,255,255,.2);
 }
 
-/* Light theme variables - softer, eye-friendly colors */
+/* Light theme variables - soft, eye-friendly colors */
 html[data-theme="light"]{
-  --bg:#f1f5f9;
-  --panel:rgba(255,255,255,.85);
-  --text:#334155;
+  --bg:#f8fafc;
+  --panel:rgba(248,250,252,.95);
+  --text:#475569;
   --muted:#64748b;
-  --border:rgba(0,0,0,.08);
+  --border:rgba(0,0,0,.06);
   --accent-1:#f97316;
   --accent-2:#ea580c;
   --online:#16a34a;
@@ -40,22 +40,22 @@ html[data-theme="light"]{
   --gold-border:rgba(251,191,36,.3);
   --gold-text:#d97706;
   
-  /* Light theme glassmorphism overrides - HD crisp */
-  --glass-bg-light: rgba(255,255,255,.92);
-  --glass-border: rgba(0,0,0,.18);
-  --glass-shadow: 0 20px 50px rgba(0,0,0,.15);
-  --glass-inner-shadow: inset 0 1px 0 rgba(255,255,255,.4);
+  /* Light theme glassmorphism overrides - soft and gentle */
+  --glass-bg-light: rgba(248,250,252,.88);
+  --glass-border: rgba(0,0,0,.12);
+  --glass-shadow: 0 20px 50px rgba(0,0,0,.08);
+  --glass-inner-shadow: inset 0 1px 0 rgba(255,255,255,.6);
 }
 
-/* Light theme background */
+/* Light theme background - soft and eye-friendly */
 html[data-theme="light"] body.rev-skin {
   background:
-    /* Orange accent gradients for glass effect */
-    radial-gradient(circle at 20% 80%, rgba(249,115,22,.06) 0%, transparent 60%),
-    radial-gradient(circle at 80% 20%, rgba(249,115,22,.04) 0%, transparent 60%),
-    radial-gradient(circle at 50% 50%, rgba(249,115,22,.03) 0%, transparent 70%),
-    /* Base gradient for depth */
-    linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    /* Soft orange accent gradients for gentle glass effect */
+    radial-gradient(circle at 20% 80%, rgba(249,115,22,.04) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(249,115,22,.03) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(249,115,22,.02) 0%, transparent 70%),
+    /* Soft base gradient for gentle depth */
+    linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f8fafc 100%);
 }
 
 html[data-theme="light"] body.rev-skin::before {
@@ -64,8 +64,8 @@ html[data-theme="light"] body.rev-skin::before {
       45deg,
       transparent,
       transparent 2px,
-      rgba(249,115,22,.015) 2px,
-      rgba(249,115,22,.015) 4px
+      rgba(249,115,22,.008) 2px,
+      rgba(249,115,22,.008) 4px
     );
 }
 
@@ -458,7 +458,9 @@ html[data-theme="light"] .chat-container {
   padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid var(--glass-border);
-  background: var(--glass-bg-dark);
+  background: 
+    linear-gradient(135deg, rgba(255,122,24,.15) 0%, rgba(255,90,0,.1) 100%),
+    var(--glass-bg-dark);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   box-shadow: 
@@ -475,12 +477,34 @@ html[data-theme="light"] .chat-container {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,122,24,.4), transparent);
   z-index: 1;
 }
 
+.ibox::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,122,24,.08) 0%, transparent 50%, rgba(255,90,0,.06) 100%);
+  border-radius: 12px;
+  z-index: 0;
+}
+
 html[data-theme="light"] .ibox {
-  background: var(--glass-bg-light);
+  background: 
+    linear-gradient(135deg, rgba(249,115,22,.12) 0%, rgba(234,88,12,.08) 100%),
+    var(--glass-bg-light);
+}
+
+html[data-theme="light"] .ibox::before {
+  background: linear-gradient(90deg, transparent, rgba(249,115,22,.3), transparent);
+}
+
+html[data-theme="light"] .ibox::after {
+  background: linear-gradient(135deg, rgba(249,115,22,.06) 0%, transparent 50%, rgba(234,88,12,.04) 100%);
 }
 
 #messageInput{
@@ -490,11 +514,17 @@ html[data-theme="light"] .ibox {
   outline:none;
   color:var(--text);
   font-size:13px;
+  position: relative;
+  z-index: 2;
 }
 
 #messageInput::placeholder{
   color:var(--muted);
-  opacity:.5;
+  opacity:.7;
+}
+
+#messageInput:focus {
+  color:var(--text);
 }
 
 .btn.send{
@@ -991,15 +1021,16 @@ html[data-theme="light"] .modal-content {
 
 /* Light theme adjustments */
 html[data-theme="light"] .splash-bg .blob {
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 html[data-theme="light"] .progress-track {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 html[data-theme="light"] .tip {
   color: var(--muted);
+  opacity: 0.9;
 }
 
 /* Responsive design */
@@ -1057,37 +1088,37 @@ html[data-theme="light"] .tip {
 
 /* Light theme specific overrides */
 html[data-theme="light"] .btn{
-  background: rgba(0,0,0,.1);
+  background: rgba(0,0,0,.08);
   color: var(--text);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
 html[data-theme="light"] .btn:hover{
-  background: rgba(0,0,0,.2);
+  background: rgba(0,0,0,.15);
 }
 
 html[data-theme="light"] .pill.users{
-  background: rgba(0,0,0,.15);
+  background: rgba(0,0,0,.12);
   color: var(--text);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
 html[data-theme="light"] .modal{
-  background: rgba(0,0,0,.4);
+  background: rgba(0,0,0,.3);
 }
 
 html[data-theme="light"] .modal-content{
-  box-shadow: 0 30px 100px rgba(0,0,0,.2);
+  box-shadow: 0 30px 100px rgba(0,0,0,.12);
 }
 
 html[data-theme="light"] .game-item:hover{
-  box-shadow: 0 12px 30px rgba(0,0,0,.15);
+  box-shadow: 0 12px 30px rgba(0,0,0,.08);
 }
 
 html[data-theme="light"] .cell:hover{
-  background: rgba(0,0,0,.08);
+  background: rgba(0,0,0,.06);
 }
 
 html[data-theme="light"] .ad-banner.top-ad::before,
