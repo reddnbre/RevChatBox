@@ -1,0 +1,120 @@
+/* ===========================================
+   RevChattyBox — Header layout fix (slim + proper placement)
+   No HTML/JS changes required.
+   =========================================== */
+
+/* One frame for header + top ad + page content */
+.rev-skin .frame,
+.rev-skin header > .container,
+.rev-skin .main-container{
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Make the HEADER a 2-row grid:
+   row1 = orange bar (brand left, actions right)
+   row2 = top ad banner (centered, full width) */
+.rev-skin header{
+  display: grid;
+  grid-template-columns: auto 1fr auto;   /* left | spacer | right */
+  grid-template-rows: 44px auto;          /* slim bar | ad */
+  align-items: center;
+  gap: 8px 12px;                           /* row gap | column gap */
+  position: relative;
+  z-index: 2;
+}
+
+/* Orange bar background spans row 1 only */
+.rev-skin header::before{
+  content:"";
+  grid-column: 1 / -1;      /* span all columns */
+  grid-row: 1 / 2;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.30), rgba(0,0,0,.18)),
+    linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  height: 44px;             /* same as row height */
+  z-index: -1;              /* sits behind header content */
+}
+
+/* BRAND (left) — works whether your element is .brand or .logo-title */
+.rev-skin header .brand,
+.rev-skin header .logo-title{
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+  display: flex; align-items: center; gap: 10px;
+}
+.rev-skin header h1,
+.rev-skin header .title{
+  margin: 0; font-weight: 800; font-size: 18px; letter-spacing: .2px; color:#fff;
+}
+
+/* ACTIONS (right): Theme / Game Hub / Users / PM… */
+.rev-skin header .actions{
+  grid-column: 3 / 4;
+  grid-row: 1 / 2;
+  justify-self: end;
+  display: flex; align-items: center; gap: 8px;
+}
+/* If you don't have a wrapper called .actions, push the first button right */
+.rev-skin header > button:first-of-type,
+.rev-skin header > .btn:first-of-type,
+.rev-skin header > .pill:first-of-type{
+  grid-column: 3 / 4; grid-row: 1 / 2; justify-self: end;
+}
+.rev-skin header .btn,
+.rev-skin header .pill{
+  padding: 6px 10px;
+  font-size: 12.5px;
+  line-height: 1;
+  border-radius: 999px;
+}
+
+/* TOP AD lives on its own row (row 2), centered and slim */
+.rev-skin header .ad-banner.top-ad{
+  grid-column: 1 / -1;      /* full width of the frame */
+  grid-row: 2 / 3;
+  justify-self: center;
+  width: min(100%, 980px);
+  height: 68px;             /* slim */
+  margin: 4px 0 8px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px dashed var(--border);
+  box-shadow: 0 12px 36px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.25);
+  position: relative;
+  z-index: 1;
+}
+
+/* "Sponsored" chip */
+.rev-skin header .ad-banner.top-ad::before{
+  content: "Sponsored";
+  position: absolute; top: -9px; left: 18px;
+  font: 700 12px/1 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--muted);
+  padding: 2px 8px; border-radius: 10px;
+  background: color-mix(in oklab, var(--panel) 70%, #000 30%);
+  border: 1px solid var(--border);
+}
+
+/* Placeholder copy inside the ad frame */
+.rev-skin header .ad-banner.top-ad .ad-placeholder{
+  color: var(--muted);
+  font-weight: 600; font-size: 13.5px; letter-spacing: .2px;
+}
+
+/* Day mode border color keeps the sleek look */
+.rev-skin:not(.rev-dark) header .ad-banner.top-ad{
+  background: linear-gradient(180deg, #ffffff0d, #ffffff08);
+  border-color: #e6e8ef;
+}
+
+/* Keep the main chat card narrow so the whole composition feels fitted */
+.rev-skin .chat-container{
+  max-width: 1100px;
+  margin: 0 auto;
+  border-radius: 18px;
+}
+

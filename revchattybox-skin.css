@@ -1,0 +1,287 @@
+/* =========================================================
+   RevChattyBox – Premium Lava Theme (no JS/logic changes)
+   Scope with .rev-skin (or put on <body class="rev-skin">)
+   Add .rev-light for Day Mode
+   ========================================================= */
+:root{
+  /* shared tokens (used for fallbacks if .rev-skin not present) */
+  --bg: #0b0c10;
+  --bg-2:#0e1016;
+  --panel:#0f121a;
+  --text:#f1f3f7;
+  --muted:#9aa3ad;
+  --border: rgba(255,255,255,.12);
+  --accent-1:#ff7a18;          /* orange */
+  --accent-2:#ff3d00;          /* lava red */
+  --gold-text:#ffdca8;
+  --gold-border: rgba(255,184,77,.25);
+  --gold-grad: linear-gradient(180deg, rgba(255,184,77,.18), rgba(255,184,77,.08));
+  --online:#21e67a;
+  --r-xxl:18px; --r-xl:16px; --r-lg:14px; --r-md:12px; --r-pill:999px;
+  --e-card: 0 14px 40px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.22);
+  --e-bubble: 0 8px 24px rgba(0,0,0,.28);
+  --e-ghost: 0 3px 10px rgba(0,0,0,.2);
+  --e-accent: 0 10px 28px rgba(255,90,0,.35);
+}
+
+/* ---------- LIGHT (Day Mode) tokens ---------- */
+.rev-skin.rev-light{
+  --bg:#f6f7fb; --bg-2:#eef1f6; --panel:#ffffff; --text:#1b1e28; --muted:#6a6f7a; --border:#e6e8ef;
+  --e-card: 0 14px 40px rgba(20,24,40,.10), 0 2px 8px rgba(20,24,40,.06);
+  --e-bubble: 0 6px 20px rgba(20,24,40,.08);
+  --e-ghost: 0 4px 12px rgba(20,24,40,.06);
+  --e-accent: 0 10px 28px rgba(255,90,0,.25);
+}
+
+/* ---------- APP BACKGROUND ---------- */
+.rev-skin, body.rev-skin{
+  color:var(--text);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--panel) 35%, transparent) 0%, transparent 62%),
+    radial-gradient(1000px 600px at 90% 110%, color-mix(in oklab, var(--panel) 35%, transparent) 0%, transparent 62%),
+    linear-gradient(180deg, var(--bg), var(--bg-2));
+  font-family: Inter, Roboto, Segoe UI, system-ui, -apple-system, Arial, sans-serif;
+}
+
+/* ---------- LAYOUT: three-column with centered content ---------- */
+.rev-skin .main-container{
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 12px 20px 20px;
+  display: grid;
+  grid-template-columns: 160px 1fr 160px; /* side rails */
+  grid-template-rows: auto 1fr auto;      /* top, middle, bottom */
+  gap: 16px 24px;
+}
+
+.rev-skin .sidebar{ align-self: start; position: sticky; top: 90px; }
+.rev-skin .chat-container{ min-height: 72vh; }
+
+/* header inside chat card */
+.rev-skin .chat-container .chat-header h2{ font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.rev-skin .chat-container .chat-header .composer{ flex: 0 1 520px; margin-left: auto; }
+.rev-skin .chat-container .chat-header .composer input{ font-size: 14px; }
+/* new utility header bar inside chat */
+.rev-skin .utility-pill{ display:flex; align-items:center; gap:16px; padding:8px 12px; border-radius: var(--r-md); background: rgba(0,0,0,.25); border:1px solid var(--border); box-shadow: var(--e-ghost); }
+.rev-skin .utility-pill .site-name{ font-weight:800; letter-spacing:.2px; margin-right:auto; }
+.rev-skin .utility-pill .users-pill{ padding:6px 10px; border-radius: var(--r-pill); background: rgba(0,0,0,.35); border:1px solid var(--border); font-size: 12px; }
+
+/* Ads subtle */
+.rev-skin .ad-top,.rev-skin .ad-bottom{ height: 90px; margin: 0; }
+.rev-skin .ad-side{ min-height: 600px; }
+
+/* Messages */
+.rev-skin .messages{ font-size: 14px; line-height: 1.35; }
+.rev-skin .meta{ font-size: 11px; }
+
+/* Buttons sizing */
+.rev-skin .ghost-btn,.rev-skin .btn-ghost,.rev-skin .icon-btn{ font-size: 13px; }
+.rev-skin .send{ font-size: 13px; }
+
+/* bottom composer bar */
+.rev-skin .composer-bar{ padding: 10px 14px 16px; }
+
+/* Admin modal width harmony */
+.rev-skin #adminBackofficeModal .modal-content{ max-width: 1100px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px){
+  .rev-skin .main-container{ grid-template-columns: 1fr; gap: 16px; padding: 12px; }
+  .rev-skin .sidebar{ position: static; order: 2; }
+  .rev-skin .ad-side{ min-height: 160px; }
+  .rev-skin .chat-container .chat-header{ flex-direction: column; align-items: stretch; gap: 10px; }
+  .rev-skin .chat-container .chat-header .composer{ width: 100%; margin: 0; }
+}
+
+/* ---------- AD FRAMES (top/bottom banners & sidebars) ---------- */
+.rev-skin .ad-top, .rev-skin .ad-bottom,
+.rev-skin [class*="ad-"][class*="banner"], .rev-skin [class*="banner"],
+.rev-skin [class*="ad"][class*="top"], .rev-skin [class*="ad"][class*="bottom"]{
+  height:90px; margin:12px 16px; border-radius:var(--r-xl);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--muted);
+  background: linear-gradient(180deg, color-mix(in oklab, #fff 7%, var(--panel)) , color-mix(in oklab, #fff 3%, var(--panel)));
+  border: 1px dashed var(--border);
+  box-shadow: var(--e-card);
+  position:relative;
+}
+.rev-skin .ad-side, .rev-skin [class*="ad"][class*="side"], .rev-skin [class*="sidebar"]{
+  min-height:600px; border-radius:var(--r-xl);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--muted);
+  background: linear-gradient(180deg, color-mix(in oklab, #fff 7%, var(--panel)), color-mix(in oklab, #fff 3%, var(--panel)));
+  border: 1px dashed var(--border);
+  box-shadow: var(--e-card);
+  position:sticky; top:12px;
+}
+.rev-skin .ad-label{
+  position:absolute; top:-10px; left:16px; font-size:12px;
+  color:var(--muted); padding:2px 8px; border-radius:10px;
+  background: color-mix(in oklab, var(--panel) 70%, #000 30%);
+  border:1px solid var(--border);
+}
+
+/* ---------- CHAT CARD CONTAINER (generic targets) ---------- */
+.rev-skin .chat-card,              /* if you add .chat-card */
+.rev-skin .chat-container,         /* common name */
+.rev-skin main .card,              /* our mockup */
+.rev-skin main > section{          /* fallback */
+  display:flex; flex-direction:column; min-height:68dvh;
+  border-radius:var(--r-xxl); overflow:hidden;
+  background: linear-gradient(180deg, color-mix(in oklab, #fff 6%, var(--panel)), color-mix(in oklab, #fff 2%, var(--panel)));
+  border:1px solid var(--border);
+  box-shadow: var(--e-card);
+  position:relative; isolation:isolate;
+}
+
+/* Ambient lava orbs */
+.rev-skin .chat-card::before,
+.rev-skin .chat-card::after,
+.rev-skin main .card::before,
+.rev-skin main > section::before,
+.rev-skin main .card::after,
+.rev-skin main > section::after{
+  content:""; position:absolute; border-radius:50%; filter: blur(50px);
+  opacity:.25; pointer-events:none; z-index:0;
+}
+.rev-skin .chat-card::before,
+.rev-skin main .card::before,
+.rev-skin main > section::before{
+  width:260px; height:260px; top:-60px; right:-40px;
+  background: radial-gradient(closest-side, var(--accent-1), transparent);
+}
+.rev-skin .chat-card::after,
+.rev-skin main .card::after,
+.rev-skin main > section::after{
+  width:300px; height:300px; bottom:-100px; left:-60px;
+  background: radial-gradient(closest-side, var(--accent-2), transparent);
+}
+
+/* ---------- HEADER BAR (tries common class names) ---------- */
+.rev-skin .chat-header, .rev-skin header, .rev-skin .header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px; z-index:1; border-radius:var(--r-lg) var(--r-lg) 0 0;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.35), rgba(0,0,0,.15)),
+    linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  color:#fff;
+}
+.rev-skin .brand, .rev-skin .logo-title{ display:flex; align-items:center; gap:12px; font-weight:800; letter-spacing:.2px; }
+.rev-skin .logo, .rev-skin .brand-badge{
+  width:28px; height:28px; border-radius:10px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  box-shadow: inset 0 0 20px rgba(255,90,0,.5), 0 6px 16px rgba(0,0,0,.5);
+}
+
+/* header ghost buttons */
+.rev-skin .ghost-btn, .rev-skin .btn-ghost{
+  padding:8px 12px; border-radius:var(--r-md);
+  background: rgba(255,255,255,.10); border:1px solid var(--border);
+  color:#fff; font-weight:600; cursor:pointer;
+  transition: background .2s ease, transform .15s ease;
+}
+.rev-skin .ghost-btn:hover, .rev-skin .btn-ghost:hover{ transform:translateY(-1px); background:rgba(255,255,255,.18); }
+
+/* user count pill */
+.rev-skin .user-badge, .rev-skin .pill, .rev-skin .users-pill{
+  display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:var(--r-pill);
+  background: rgba(0,0,0,.35); border:1px solid var(--border); font-size:13px; color:#fff;
+}
+.rev-skin .user-badge .dot, .rev-skin .pill .dot, .rev-skin .users-pill .dot{
+  width:8px; height:8px; border-radius:50%; background:var(--online); box-shadow:0 0 10px var(--online);
+}
+
+/* ---------- WELCOME STRIPE ---------- */
+.rev-skin .welcome, .rev-skin [data-role="welcome"]{
+  margin:10px 16px; padding:10px 12px; border-radius:12px; z-index:1;
+  background: var(--gold-grad); border:1px solid var(--gold-border); color:var(--gold-text); font-style:italic;
+}
+
+/* ---------- MESSAGES LIST & BUBBLES ---------- */
+.rev-skin #messages, .rev-skin .messages{
+  z-index:1; padding:14px; overflow:auto;
+}
+.rev-skin .row, .rev-skin .message-row{
+  display:flex; gap:8px; margin:8px 0; max-width:72%;
+}
+.rev-skin .row.me, .rev-skin .message-row.me{ margin-left:auto; flex-direction:row-reverse; }
+
+.rev-skin .avatar, .rev-skin .msg-avatar{
+  width:30px; height:30px; border-radius:50%; display:grid; place-items:center; flex:0 0 auto;
+  background: radial-gradient(circle at 30% 30%, #222, #111);
+  border: 1px solid var(--border);
+  color:#ffd0b0; font-weight:800;
+}
+.rev-skin .bubble, .rev-skin .msg-bubble{
+  position:relative; padding:10px 12px; border-radius:var(--r-md);
+  background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow: var(--e-bubble);
+}
+.rev-skin .row.me .bubble, .rev-skin .message-row.me .msg-bubble{
+  color:#fff; border:none;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  box-shadow: var(--e-accent);
+}
+.rev-skin .meta, .rev-skin .msg-meta{ font-size:12px; color:var(--muted); margin-top:6px; }
+
+/* ---------- COMPOSER ---------- */
+.rev-skin .composer, .rev-skin .input-area{
+  display:flex; align-items:center; gap:8px; padding:10px; z-index:1;
+  border-top:1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18));
+}
+.rev-skin .ibox, .rev-skin .input-box{
+  flex:1; display:flex; align-items:center; gap:8px; padding:8px 10px;
+  background: rgba(0,0,0,.35); border:1px solid var(--border); border-radius:var(--r-md);
+  box-shadow: var(--e-ghost);
+}
+.rev-skin #messageInput, .rev-skin .ibox input, .rev-skin .input-box input, .rev-skin input[type="text"]{
+  flex:1; background:transparent; border:none; outline:none; color:var(--text);
+  font-size:14px; caret-color: var(--accent-1);
+}
+.rev-skin .icon-btn, .rev-skin .btn-icon{
+  border:none; cursor:pointer; border-radius:var(--r-md); padding:6px 8px;
+  background: rgba(255,255,255,.08); border:1px solid var(--border); color:#fff;
+  transition: background .2s ease, transform .15s ease;
+}
+.rev-skin .icon-btn:hover, .rev-skin .btn-icon:hover{ transform:translateY(-1px); background:rgba(255,255,255,.14); }
+.rev-skin .send, .rev-skin button[type="submit"]{
+  border:none; cursor:pointer; color:#111; font-weight:800;
+  padding:8px 12px; border-radius:var(--r-md);
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  box-shadow: var(--e-accent);
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.rev-skin .send:hover, .rev-skin button[type="submit"]:hover{ transform:translateY(-1px); }
+
+/* ---------- LIGHT (Day Mode) specific touch-ups ---------- */
+.rev-skin.rev-light .chat-header, .rev-skin.rev-light header, .rev-skin.rev-light .header{
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.75), rgba(255,255,255,.55)),
+    linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  color:#111;
+}
+.rev-skin.rev-light .user-badge, .rev-skin.rev-light .pill, .rev-skin.rev-light .users-pill{
+  background:#fff; border:1px solid var(--border); color:#2b2f3a; box-shadow:0 4px 12px rgba(20,24,40,.06);
+}
+.rev-skin.rev-light .ibox, .rev-skin.rev-light .input-box{
+  background:#fff; border:1px solid var(--border); box-shadow:0 4px 12px rgba(20,24,40,.06);
+}
+.rev-skin.rev-light .icon-btn, .rev-skin.rev-light .btn-icon{
+  background:#fff; border:1px solid var(--border); color:#2b2f3a; box-shadow:0 4px 12px rgba(20,24,40,.06);
+}
+.rev-skin.rev-light .icon-btn:hover, .rev-skin.rev-light .btn-icon:hover{ background:#f6f7fb; }
+.rev-skin.rev-light .avatar{ background:#fff; border:1px solid var(--border); color:#ff7a18; box-shadow:0 4px 12px rgba(20,24,40,.06); }
+.rev-skin.rev-light .bubble{ background:#fff; border:1px solid var(--border); box-shadow:0 6px 20px rgba(20,24,40,.08); }
+
+/* ---------- ACCESSIBILITY ---------- */
+.rev-skin .ghost-btn:focus, .rev-skin .icon-btn:focus, .rev-skin .send:focus,
+.rev-skin button[type="submit"]:focus, .rev-skin #messageInput:focus{
+  outline:2px solid color-mix(in oklab, var(--accent-1) 70%, white 30%);
+  outline-offset:2px; box-shadow:0 0 0 4px rgba(255,122,24,.25);
+}
+@media (prefers-reduced-motion: reduce){
+  *{ transition:none !important; }
+}
+

@@ -1,0 +1,190 @@
+/* RevChattyBox — Ads + Typography (v2) */
+/* Fonts: headings/labels = Sora, body = Inter. Works with your existing classes. */
+
+.rev-skin{
+  --text: #f1f3f7;
+  --muted: #9aa3ad;
+  --panel: #0f121a;
+  --border: rgba(255,255,255,.12);
+  --accent-1:#ff7a18; --accent-2:#ff3d00;
+  --gold-text:#ffdca8; --gold-border:rgba(255,184,77,.25);
+  --r-xl:20px; --r-lg:18px;
+  --shadow-card: 0 18px 60px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.25);
+  --shadow-soft: 0 8px 24px rgba(0,0,0,.25);
+}
+
+.rev-skin,
+.rev-skin body{
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* Titles / labels look more premium */
+.rev-skin h1, .rev-skin h2, .rev-skin h3,
+.rev-skin .ad-label, .rev-skin .ad-placeholder,
+.rev-skin .user-pill, .rev-skin .btn,
+.rev-skin .chat-header h2{
+  font-family: Sora, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  letter-spacing: .2px;
+}
+
+/* ---------------- Ad Frames ---------------- */
+
+/* TOP banner – centered, subtle border + soft shadow */
+.rev-skin .ad-banner.top-ad{
+  width: min(100%, 980px);
+  height: 90px;
+  margin: 12px auto 10px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px dashed var(--border);
+  box-shadow: var(--shadow-card);
+  position: relative;
+}
+
+/* BOTTOM banner – same framing */
+.rev-skin .ad-banner.bottom-ad{
+  width: min(100%, 980px);
+  height: 90px;
+  margin: 10px auto 8px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px dashed var(--border);
+  box-shadow: var(--shadow-card);
+  position: relative;
+}
+
+/* SIDE banners – 160×600 feel, sticky rails */
+.rev-skin .sidebar .ad-banner.side-ad{
+  min-height: 600px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px dashed var(--border);
+  box-shadow: var(--shadow-card);
+  position: sticky;
+  top: 90px;
+}
+
+/* Sponsored chip – small, classy */
+.rev-skin .ad-banner::before{
+  content: "Sponsored";
+  position: absolute;
+  top: -10px; left: 16px;
+  font: 700 12px/1 Sora, Inter, sans-serif;
+  color: var(--muted);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.35);
+  border: 1px solid var(--border);
+}
+
+/* Placeholder text inside the frame */
+.rev-skin .ad-placeholder{
+  color: var(--muted);
+  font: 600 14px/1.2 Sora, Inter, sans-serif;
+  text-transform: none;
+  opacity: .95;
+}
+
+/* Tight grid rails so ads don't feel floaty */
+.rev-skin .main-container{
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 12px 20px 20px;
+  display: grid;
+  grid-template-columns: 180px 1fr 180px; /* slightly slimmer rails */
+  gap: 18px 26px;
+}
+
+/* ---------------- Chat Header Polish ---------------- */
+
+.rev-skin .chat-container{
+  overflow: hidden; position: relative; isolation: isolate;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+}
+
+/* Lava header bar with softer radius and better contrast */
+.rev-skin .chat-header{
+  padding: 16px 18px;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.30), rgba(0,0,0,.18)),
+    linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  border-bottom: 1px solid var(--border);
+  color: #fff;
+}
+
+.rev-skin .chat-header h2{
+  font-weight: 800;
+  font-size: 18px;
+}
+
+/* Pill buttons + user counter uniform */
+.rev-skin .btn, .rev-skin .user-pill{
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.rev-skin .btn{
+  background: rgba(255,255,255,.10);
+  border: 1px solid var(--border);
+  color: #fff;
+  transition: background .2s ease, transform .15s ease;
+}
+.rev-skin .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.18); }
+.rev-skin .user-pill{
+  background: rgba(0,0,0,.35);
+  border: 1px solid var(--border);
+  color: #fff;
+}
+.rev-skin .user-pill .dot{
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #21e67a; box-shadow: 0 0 8px #21e67a;
+}
+
+/* ---------------- Welcome Stripe ---------------- */
+.rev-skin .system-message{
+  background: linear-gradient(180deg, rgba(255,184,77,.18), rgba(255,184,77,.08));
+  border: 1px solid var(--gold-border);
+  color: var(--gold-text);
+  font-style: italic;
+  box-shadow: none;
+}
+
+/* ---------------- Composer Tighten ---------------- */
+.rev-skin .footer{
+  border-top: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18));
+  box-shadow: var(--shadow-soft);
+}
+.rev-skin #messageInput{
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: rgba(17,24,39,.55);
+  color: #e5e7eb;
+}
+
+/* Send button = lava */
+.rev-skin .btn-primary{
+  border: none;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #111;
+  box-shadow: 0 10px 28px rgba(255,90,0,.35);
+  font-weight: 800;
+}
+.rev-skin .btn-primary:hover{ transform: translateY(-1px); }
+
+/* Day mode tweaks (if you use .rev-dark off) */
+.rev-skin:not(.rev-dark) .ad-banner.top-ad,
+.rev-skin:not(.rev-dark) .ad-banner.bottom-ad,
+.rev-skin:not(.rev-dark) .ad-banner.side-ad{
+  background: linear-gradient(180deg, #ffffff0d, #ffffff08);
+  border-color: #e6e8ef;
+}
+.rev-skin:not(.rev-dark) #messageInput{
+  background: #fff; color: #1b1e28; border-color: #e6e8ef;
+}
+

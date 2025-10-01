@@ -1,0 +1,883 @@
+/* ================================
+   RevChattyBox — Exact Layout Match to Screenshot
+   ================================ */
+
+:root,
+html[data-theme="dark"]{
+  --bg:#0a0e13;
+  --panel:rgba(26,31,40,.85);
+  --text:#e5e7eb;
+  --muted:#8791a1;
+  --border:rgba(255,255,255,.08);
+  --accent-1:#ff7a18;
+  --accent-2:#ff5a00;
+  --online:#22c55e;
+  --gold-bg:rgba(120,80,30,.25);
+  --gold-border:rgba(180,130,60,.35);
+  --gold-text:#d4b483;
+  
+  /* HD glassmorphism tokens - crisp and clear */
+  --glass-bg-dark: rgba(20,28,45,.85);
+  --glass-bg-light: rgba(255,255,255,.90);
+  --glass-border: rgba(255,255,255,.35);
+  --glass-blur: 20px;
+  --glass-sat: 140%;
+  --glass-shadow: 0 20px 50px rgba(0,0,0,.25);
+  --glass-inner-shadow: inset 0 1px 0 rgba(255,255,255,.2);
+}
+
+/* Light theme variables - softer, eye-friendly colors */
+html[data-theme="light"]{
+  --bg:#f1f5f9;
+  --panel:rgba(255,255,255,.85);
+  --text:#334155;
+  --muted:#64748b;
+  --border:rgba(0,0,0,.08);
+  --accent-1:#f97316;
+  --accent-2:#ea580c;
+  --online:#16a34a;
+  --gold-bg:rgba(251,191,36,.15);
+  --gold-border:rgba(251,191,36,.3);
+  --gold-text:#d97706;
+  
+  /* Light theme glassmorphism overrides - HD crisp */
+  --glass-bg-light: rgba(255,255,255,.92);
+  --glass-border: rgba(0,0,0,.18);
+  --glass-shadow: 0 20px 50px rgba(0,0,0,.15);
+  --glass-inner-shadow: inset 0 1px 0 rgba(255,255,255,.4);
+}
+
+/* Light theme background */
+html[data-theme="light"] body.rev-skin {
+  background:
+    /* Orange accent gradients for glass effect */
+    radial-gradient(circle at 20% 80%, rgba(249,115,22,.06) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(249,115,22,.04) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(249,115,22,.03) 0%, transparent 70%),
+    /* Base gradient for depth */
+    linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+}
+
+html[data-theme="light"] body.rev-skin::before {
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(249,115,22,.015) 2px,
+      rgba(249,115,22,.015) 4px
+    );
+}
+
+body.rev-skin{
+  background:
+    /* HD Orange accent gradients for crisp glass effect */
+    radial-gradient(circle at 25% 75%, rgba(255,122,24,.12) 0%, transparent 50%),
+    radial-gradient(circle at 75% 25%, rgba(255,122,24,.08) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(255,122,24,.06) 0%, transparent 60%),
+    /* Sharp base gradient for HD depth */
+    linear-gradient(135deg, #0a0e13 0%, #0f1629 25%, #121735 50%, #0f1629 75%, #0a0e13 100%);
+  color: var(--text);
+  font-family: Inter, system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  position: relative;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* HD pattern overlay for crisp glass effect visibility */
+body.rev-skin::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 3px,
+      rgba(255,122,24,.03) 3px,
+      rgba(255,122,24,.03) 6px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 5px,
+      rgba(255,122,24,.015) 5px,
+      rgba(255,122,24,.015) 10px
+    );
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.8;
+}
+
+/* HD Glassmorphism Utility Classes */
+.glass {
+  background: var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)); /* Safari */
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: 
+    var(--glass-shadow),
+    var(--glass-inner-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+  z-index: 1;
+}
+
+/* Light theme glass swap */
+html[data-theme="light"] .glass {
+  background: var(--glass-bg-light);
+}
+
+/* Optional: soft inner highlight for extra "pane" realism */
+.glass.glow {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
+    var(--glass-bg-dark);
+}
+
+html[data-theme="light"] .glass.glow {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.05)),
+    var(--glass-bg-light);
+}
+
+/* ---------- TOP AD BANNER ONLY IN HEADER (centered, tight) ---------- */
+header.header{
+  background:transparent;
+  padding:6px 0;
+  display:flex;
+  justify-content:center;
+  position: relative;
+  z-index: 2;
+}
+
+.ad-banner.top-ad{
+  width:728px;
+  height:90px;
+  background: var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 
+    var(--glass-shadow),
+    var(--glass-inner-shadow);
+  overflow: hidden;
+}
+
+.ad-banner.top-ad::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+  z-index: 1;
+}
+
+html[data-theme="light"] .ad-banner.top-ad {
+  background: var(--glass-bg-light);
+}
+
+.ad-banner.top-ad::before{
+  content:"Sponsored";
+  position:absolute;
+  top:6px;
+  left:12px;
+  font-size:10px;
+  font-weight:700;
+  color:var(--muted);
+  padding:2px 6px;
+  border-radius:6px;
+  background:rgba(0,0,0,.6);
+}
+
+.ad-placeholder{
+  color:var(--muted);
+  font-size:12px;
+}
+
+/* ---------- 3 COLUMN GRID (proper spacing between ads and chat) ---------- */
+.main-container{
+  display:grid;
+  grid-template-columns:160px 1fr 160px;
+  gap:20px;
+  max-width:1400px;
+  margin:0 auto;
+  padding:0 12px 12px;
+  position: relative;
+  z-index: 2;
+}
+
+/* ---------- SIDE ADS (160x600) ---------- */
+.sidebar{
+  position:sticky;
+  top:120px;
+}
+
+.sidebar .ad-banner.side-ad{
+  width:160px;
+  min-height:600px;
+  background: var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  position: relative;
+  box-shadow: var(--glass-shadow);
+}
+
+html[data-theme="light"] .sidebar .ad-banner.side-ad {
+  background: var(--glass-bg-light);
+}
+
+.sidebar .ad-banner.side-ad::before{
+  content:"Sponsored";
+  position:absolute;
+  top:6px;
+  left:10px;
+  font-size:10px;
+  font-weight:700;
+  color:var(--muted);
+  padding:2px 6px;
+  border-radius:6px;
+  background:rgba(0,0,0,.6);
+}
+
+/* ---------- CHAT CARD (center column) ---------- */
+.chat-container{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.05)),
+    var(--glass-bg-dark);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 75vh;
+  box-shadow: 
+    0 25px 80px rgba(0,0,0,.2),
+    var(--glass-inner-shadow);
+  position: relative;
+  z-index: 3;
+}
+
+.chat-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255,255,255,.4) 20%, 
+    rgba(255,255,255,.6) 50%, 
+    rgba(255,255,255,.4) 80%, 
+    transparent
+  );
+  z-index: 1;
+}
+
+html[data-theme="light"] .chat-container {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.05)),
+    var(--glass-bg-light);
+}
+
+/* ORANGE BAR at top of chat card (smaller height) - Enhanced glassmorphism */
+.chat-container > .chat-header{
+  height:44px;
+  display:flex;
+  align-items:center;
+  padding:0 16px;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.28), rgba(0,0,0,.12)), /* tint over brand gradient */
+    linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.brand .title{
+  margin:0;
+  font-size:16px;
+  font-weight:800;
+  color:#fff;
+}
+
+.bar-spacer{
+  flex:1;
+}
+
+.actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.btn, .pill{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+  border:none;
+}
+
+.btn{
+  background:rgba(0,0,0,.3);
+  color:#fff;
+}
+
+.btn:hover{
+  background:rgba(0,0,0,.45);
+}
+
+.btn.ghost{
+  background:transparent;
+}
+
+.pill.users{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:rgba(0,0,0,.35);
+  color:#fff;
+  font-size:11px;
+}
+
+.pill .dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--online);
+  box-shadow:0 0 8px var(--online);
+}
+
+.display-name{
+  color:#fff;
+  font-size:12px;
+  font-weight:600;
+}
+
+/* WELCOME STRIPE (gold) */
+.system-message{
+  margin:0;
+  padding:8px 14px;
+  background:var(--gold-bg);
+  border-top:1px solid var(--gold-border);
+  border-bottom:1px solid var(--gold-border);
+  color:var(--gold-text);
+  font-style:italic;
+  font-size:13px;
+}
+
+/* MESSAGES AREA */
+.chat-messages{
+  flex:1;
+  padding:14px;
+  overflow-y:auto;
+}
+
+.message{
+  margin-bottom:10px;
+  padding:10px 13px;
+  border-radius:12px;
+  max-width:70%;
+}
+
+.message.user{
+  margin-left:auto;
+  text-align:right;
+  background:linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color:#fff;
+}
+
+.message.bot{
+  background:
+    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
+    var(--glass-bg);
+  backdrop-filter:blur(10px) saturate(1.1);
+  border:1px solid var(--border);
+  color:var(--text);
+  box-shadow:0 4px 15px rgba(0,0,0,.1);
+}
+
+.message-time{
+  font-size:10px;
+  opacity:.65;
+  margin-top:3px;
+}
+
+/* COMPOSER BAR (bottom of chat) */
+.composer-bar{
+  padding:10px 14px;
+  border-top:1px solid var(--border);
+  background:var(--bg);
+}
+
+.ibox{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-dark);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 
+    0 8px 25px rgba(0,0,0,.15),
+    var(--glass-inner-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.ibox::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
+  z-index: 1;
+}
+
+html[data-theme="light"] .ibox {
+  background: var(--glass-bg-light);
+}
+
+#messageInput{
+  flex:1;
+  background:transparent;
+  border:none;
+  outline:none;
+  color:var(--text);
+  font-size:13px;
+}
+
+#messageInput::placeholder{
+  color:var(--muted);
+  opacity:.5;
+}
+
+.btn.send{
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  font-size:12px;
+  font-weight:800;
+  color:#0a0e13;
+  background:linear-gradient(135deg, var(--accent-1), var(--accent-2));
+}
+
+/* ---------- BOTTOM AD BANNER ---------- */
+.footer{
+  padding:10px 0;
+  display:flex;
+  justify-content:center;
+  position: relative;
+  z-index: 2;
+}
+
+.footer .ad-banner.bottom-ad{
+  width:728px;
+  height:90px;
+  background: var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: var(--glass-shadow);
+}
+
+html[data-theme="light"] .footer .ad-banner.bottom-ad {
+  background: var(--glass-bg-light);
+}
+
+.footer .ad-banner.bottom-ad::before{
+  content:"Sponsored";
+  position:absolute;
+  top:6px;
+  left:12px;
+  font-size:10px;
+  font-weight:700;
+  color:var(--muted);
+  padding:2px 6px;
+  border-radius:6px;
+  background:rgba(0,0,0,.6);
+}
+
+/* ---------- MODALS ---------- */
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:2000;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(4px);
+}
+
+.modal-content{
+  background: var(--glass-bg-dark);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  margin: 5% auto;
+  max-width: 900px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 30px 100px rgba(0,0,0,.4);
+}
+
+html[data-theme="light"] .modal-content {
+  background: var(--glass-bg-light);
+}
+
+.modal-header{
+  background:linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  color:#fff;
+  padding:16px 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.modal-header h2{
+  margin:0;
+  font-size:18px;
+  font-weight:800;
+}
+
+.close{
+  color:#fff;
+  font-size:24px;
+  font-weight:700;
+  cursor:pointer;
+  opacity:.9;
+}
+
+.close:hover{
+  opacity:1;
+}
+
+.modal-body{
+  padding:20px;
+  overflow:auto;
+}
+
+/* ---------- GAME STYLES ---------- */
+.game-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));
+  gap:16px;
+}
+
+.game-item{
+  background:
+    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
+    var(--glass-bg);
+  backdrop-filter:blur(15px) saturate(1.1);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px;
+  text-align:center;
+  cursor:pointer;
+  transition:all .2s ease;
+  box-shadow:0 8px 25px rgba(0,0,0,.1);
+}
+
+.game-item:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 30px rgba(0,0,0,.4);
+}
+
+.game-item h3{
+  color:var(--accent-1);
+  margin-bottom:8px;
+}
+
+.game-item p{
+  color:var(--muted);
+  font-size:13px;
+}
+
+.game-grid-3x3{
+  display:grid;
+  grid-template-columns:repeat(3, 80px);
+  grid-template-rows:repeat(3, 80px);
+  gap:4px;
+  margin:20px auto;
+  background:var(--bg);
+  padding:4px;
+  border-radius:8px;
+}
+
+.cell{
+  background:var(--panel);
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:2rem;
+  color:var(--text);
+  cursor:pointer;
+  transition:all .2s ease;
+}
+
+.cell:hover{
+  background:var(--border);
+}
+
+/* FORMS */
+.form-group{
+  margin-bottom:16px;
+}
+
+.form-group label{
+  display:block;
+  margin-bottom:6px;
+  font-weight:600;
+  color:var(--text);
+}
+
+.form-group input,
+.form-group textarea{
+  width:100%;
+  padding:10px;
+  background:
+    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
+    var(--glass-bg);
+  backdrop-filter:blur(10px) saturate(1.1);
+  border:1px solid var(--border);
+  border-radius:8px;
+  color:var(--text);
+  font-size:14px;
+  box-shadow:0 4px 15px rgba(0,0,0,.1);
+}
+
+.form-group input:focus,
+.form-group textarea:focus{
+  outline:none;
+  border-color:var(--accent-1);
+}
+
+/* ADMIN STATS */
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+  gap:12px;
+  margin:12px 0 20px;
+}
+
+.stat-card{
+  background:
+    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
+    var(--glass-bg);
+  backdrop-filter:blur(15px) saturate(1.1);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px;
+  box-shadow:0 8px 25px rgba(0,0,0,.1);
+}
+
+.stat-title{
+  color:var(--muted);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+}
+
+.stat-value{
+  font-size:24px;
+  font-weight:700;
+  margin-top:4px;
+  color:var(--text);
+}
+
+.admin-section{
+  margin-bottom:20px;
+  padding:16px;
+  background:
+    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
+    var(--glass-bg);
+  backdrop-filter:blur(15px) saturate(1.1);
+  border-radius:10px;
+  border-left:3px solid var(--accent-1);
+  box-shadow:0 8px 25px rgba(0,0,0,.1);
+}
+
+.admin-section h3{
+  color:var(--accent-1);
+  margin-bottom:12px;
+  font-size:16px;
+}
+
+/* SPLASH SCREEN */
+.splash{
+  position:fixed;
+  inset:0;
+  z-index:3000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--bg);
+}
+
+.splash-inner{
+  text-align:center;
+  color:var(--text);
+}
+
+.splash .logo{
+  font-size:2rem;
+  font-weight:900;
+  margin-bottom:8px;
+}
+
+.splash .tag{
+  color:var(--muted);
+  margin-bottom:20px;
+}
+
+.loader{
+  width:280px;
+  height:8px;
+  background:rgba(255,255,255,.08);
+  border-radius:999px;
+  margin:0 auto 16px;
+  overflow:hidden;
+  position:relative;
+}
+
+.loader .bar{
+  position:absolute;
+  left:0;
+  top:0;
+  width:40%;
+  height:100%;
+  background:linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  border-radius:999px;
+  animation:loadbar 1.2s infinite;
+}
+
+@keyframes loadbar{
+  0%{transform:translateX(-100%);}
+  50%{transform:translateX(50%);}
+  100%{transform:translateX(220%);}
+}
+
+/* ANIMATIONS */
+@keyframes pulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.05);}
+}
+
+@keyframes explosion{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.2);}
+}
+
+@keyframes splash{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(0.9);}
+}
+
+/* Light theme specific overrides */
+html[data-theme="light"] .btn{
+  background: rgba(0,0,0,.1);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+html[data-theme="light"] .btn:hover{
+  background: rgba(0,0,0,.2);
+}
+
+html[data-theme="light"] .pill.users{
+  background: rgba(0,0,0,.15);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+html[data-theme="light"] .modal{
+  background: rgba(0,0,0,.4);
+}
+
+html[data-theme="light"] .modal-content{
+  box-shadow: 0 30px 100px rgba(0,0,0,.2);
+}
+
+html[data-theme="light"] .game-item:hover{
+  box-shadow: 0 12px 30px rgba(0,0,0,.15);
+}
+
+html[data-theme="light"] .cell:hover{
+  background: rgba(0,0,0,.08);
+}
+
+html[data-theme="light"] .ad-banner.top-ad::before,
+html[data-theme="light"] .ad-banner.side-ad::before,
+html[data-theme="light"] .ad-banner.bottom-ad::before{
+  background: rgba(0,0,0,.7);
+  color: #fff;
+}
+
+/* RESPONSIVE */
+@media (max-width:1100px){
+  .main-container{
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  .sidebar{
+    position:static;
+  }
+  .sidebar .ad-banner.side-ad{
+    min-height:200px;
+  }
+}

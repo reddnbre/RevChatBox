@@ -1,0 +1,125 @@
+/* -------------------------------
+   RevChattyBox – Ads + Typography polish
+   Scope: your current markup from index.html
+   Depends on: revchattybox-skin.css (then overrides here)
+   ------------------------------- */
+
+/* Fonts (headings, labels = Outfit; body = Inter) */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@500;700;800&display=swap");
+
+/* Base font stack */
+.rev-skin,
+.rev-skin body{
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* Headings & ad label font */
+.rev-skin h1, .rev-skin h2, .rev-skin h3,
+.rev-skin .ad-placeholder,
+.rev-skin .ad-banner::before{
+  font-family: Outfit, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  letter-spacing: .2px;
+}
+
+/* -------------------------------
+   Ad Banners – layout + "Sponsored" label
+   Your markup: .ad-banner.top-ad, .ad-banner.side-ad, .ad-banner.bottom-ad
+   ------------------------------- */
+
+/* Top banner — center, 728×90 feel, premium frame */
+.rev-skin header .ad-banner.top-ad{
+  width: min(100%, 980px);
+  height: 90px;
+  margin: 12px auto 10px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in oklab, #fff 7%, var(--panel)), color-mix(in oklab, #fff 3%, var(--panel)));
+  border: 1px dashed var(--border);
+  box-shadow: var(--e-card);
+  position: relative;
+}
+
+/* Bottom banner — same frame, sits flush above footer edge */
+.rev-skin .footer .ad-banner.bottom-ad{
+  width: min(100%, 980px);
+  height: 90px;
+  margin: 10px auto 6px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in oklab, #fff 7%, var(--panel)), color-mix(in oklab, #fff 3%, var(--panel)));
+  border: 1px dashed var(--border);
+  box-shadow: var(--e-card);
+  position: relative;
+}
+
+/* Side "skyscraper" ads — 160×600 feel, sticky rail */
+.rev-skin .sidebar .ad-banner.side-ad{
+  width: 100%;
+  min-height: 600px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in oklab, #fff 7%, var(--panel)), color-mix(in oklab, #fff 3%, var(--panel)));
+  border: 1px dashed var(--border);
+  box-shadow: var(--e-card);
+  position: sticky;
+  top: 90px; /* tucks under your sticky header */
+}
+
+/* "Sponsored" chip (auto-added; no HTML change needed) */
+.rev-skin .ad-banner::before{
+  content: "Sponsored";
+  position: absolute;
+  top: -10px; left: 16px;
+  font-size: 12px; font-weight: 700;
+  color: var(--muted);
+  padding: 2px 8px; border-radius: 10px;
+  background: color-mix(in oklab, var(--panel) 70%, #000 30%);
+  border: 1px solid var(--border);
+}
+
+/* Ad placeholder text style (when no creative is present) */
+.rev-skin .ad-placeholder{
+  color: var(--muted);
+  text-transform: none; /* cleaner than all-caps */
+  font-weight: 600;
+  font-size: 14px;
+  opacity: .95;
+}
+
+/* Tighten the ad rails and main grid (harmonize with your layout) */
+.rev-skin .main-container{
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 12px 20px 20px;
+  display: grid;
+  grid-template-columns: 160px 1fr 160px;
+  gap: 16px 24px;
+}
+.rev-skin .sidebar{ align-self: start; }
+
+/* -------------------------------
+   Header typography + pills (cleaner)
+   ------------------------------- */
+.rev-skin .header h1{
+  font-family: Outfit, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: .3px;
+}
+.rev-skin .user-info{ gap: 12px; }
+.rev-skin .btn{ font-weight: 700; font-size: 13px; }
+
+/* -------------------------------
+   Dark mode tweaks (using your existing data-theme or add .rev-dark)
+   ------------------------------- */
+html[data-theme="dark"] .rev-skin .ad-banner.top-ad,
+.rev-skin.rev-dark .ad-banner.top-ad,
+html[data-theme="dark"] .rev-skin .ad-banner.bottom-ad,
+.rev-skin.rev-dark .ad-banner.bottom-ad,
+html[data-theme="dark"] .rev-skin .ad-banner.side-ad,
+.rev-skin.rev-dark .ad-banner.side-ad{
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border-color: var(--border);
+}
+html[data-theme="dark"] .rev-skin .ad-placeholder,
+.rev-skin.rev-dark .ad-placeholder{
+  color: #9aa3ad;
+}
+
