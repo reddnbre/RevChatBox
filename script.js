@@ -592,9 +592,11 @@ const TicTacToe = {
         
         gameState.board[index] = gameState.currentPlayer;
         const cell = document.querySelector(`[data-index="${index}"]`);
-        cell.textContent = gameState.currentPlayer;
-        cell.style.background = gameState.currentPlayer === 'X' ? '#007bff' : '#dc3545';
-        cell.style.color = 'white';
+        if (cell) {
+            cell.textContent = gameState.currentPlayer;
+            cell.style.background = gameState.currentPlayer === 'X' ? '#007bff' : '#dc3545';
+            cell.style.color = 'white';
+        }
         
         if (TicTacToe.checkWinner()) {
             TicTacToe.highlightWinningCells();
@@ -639,8 +641,10 @@ const TicTacToe = {
             if (gameState.board[a] && gameState.board[a] === gameState.board[b] && gameState.board[a] === gameState.board[c]) {
                 pattern.forEach(index => {
                     const cell = document.querySelector(`[data-index="${index}"]`);
-                    cell.style.background = '#28a745';
-                    cell.style.animation = 'pulse 0.5s ease-in-out 3';
+                    if (cell) {
+                        cell.style.background = '#28a745';
+                        cell.style.animation = 'pulse 0.5s ease-in-out 3';
+                    }
                 });
                 break;
             }
@@ -792,7 +796,7 @@ const Battleship = {
                 <div class="setup-board">
                     <div class="board-grid setup-grid">
                         ${Array(100).fill().map((_, i) => 
-                            `<div class="cell setup-cell" data-index="${i}"></div>`
+                            `<div class="cell setup-cell" data-index="${i}" onclick="Battleship.handleSetupClick(${i})"></div>`
                         ).join('')}
                     </div>
                 </div>
@@ -833,6 +837,70 @@ const Battleship = {
                 cell.style.color = '';
             }
         });
+    },
+    
+    handleSetupClick: (index) => {
+        if (gameState.gamePhase !== 'setup') return;
+        
+        const currentShip = gameState.player1Ships[gameState.currentShipIndex];
+        if (!currentShip || currentShip.placed) return;
+        
+        const row = Math.floor(index / 10);
+        const col = index % 10;
+        const orientation = gameState.shipOrientation;
+        
+        // Check if ship can be placed at this position
+        if (Battleship.canPlaceShip(currentShip, row, col, orientation)) {
+            Battleship.placeShip(currentShip, row, col, orientation);
+            Battleship.showSetupScreen();
+        } else {
+            Utils.showNotification('Cannot place ship here!', 'error');
+        }
+    },
+    
+    canPlaceShip: (ship, row, col, orientation) => {
+        const board = gameState.player1Board;
+        const size = ship.size;
+        
+        // Check bounds
+        if (orientation === 'horizontal') {
+            if (col + size > 10) return false;
+            for (let i = 0; i < size; i++) {
+                if (board[row * 10 + col + i] !== '') return false;
+            }
+        } else {
+            if (row + size > 10) return false;
+            for (let i = 0; i < size; i++) {
+                if (board[(row + i) * 10 + col] !== '') return false;
+            }
+        }
+        return true;
+    },
+    
+    placeShip: (ship, row, col, orientation) => {
+        const board = gameState.player1Board;
+        const size = ship.size;
+        ship.positions = [];
+        
+        for (let i = 0; i < size; i++) {
+            let index;
+            if (orientation === 'horizontal') {
+                index = row * 10 + col + i;
+            } else {
+                index = (row + i) * 10 + col;
+            }
+            
+            board[index] = ship.name;
+            ship.positions.push(index);
+        }
+        
+        ship.placed = true;
+        gameState.currentShipIndex++;
+        
+        // Check if all ships are placed
+        if (gameState.currentShipIndex >= gameState.player1Ships.length) {
+            Battleship.startGame();
+        }
     },
     
     toggleOrientation: () => {
