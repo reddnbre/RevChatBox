@@ -868,6 +868,112 @@ html[data-theme="light"] .ad-banner.bottom-ad::before{
   color: #fff;
 }
 
+/* COOKIE CONSENT BANNER */
+.cookie-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  background: var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border-top: 1px solid var(--glass-border);
+  box-shadow: 
+    0 -10px 30px rgba(0,0,0,.3),
+    var(--glass-inner-shadow);
+  transform: translateY(100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.cookie-banner.show {
+  transform: translateY(0);
+}
+
+.cookie-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 20px;
+}
+
+.cookie-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.cookie-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.cookie-text p {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.cookie-actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.cookie-actions .btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  min-width: 80px;
+}
+
+/* Light theme cookie banner */
+html[data-theme="light"] .cookie-banner {
+  background: var(--glass-bg-light);
+  border-top-color: var(--glass-border);
+  box-shadow: 
+    0 -10px 30px rgba(0,0,0,.15),
+    var(--glass-inner-shadow);
+}
+
+html[data-theme="light"] .cookie-text p {
+  color: var(--text);
+}
+
+/* Responsive cookie banner */
+@media (max-width: 768px) {
+  .cookie-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .cookie-text {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .cookie-actions {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .cookie-actions {
+    flex-direction: column;
+  }
+  
+  .cookie-actions .btn {
+    width: 100%;
+  }
+}
+
 /* RESPONSIVE */
 @media (max-width:1100px){
   .main-container{

@@ -136,6 +136,70 @@ const UIManager = {
         const themeBtn = document.getElementById('themeToggleBtn');
         if (themeBtn) themeBtn.addEventListener('click', UIManager.toggleTheme);
         NameManager.init();
+        CookieManager.init();
+    }
+};
+
+// Cookie Consent Management
+const CookieManager = {
+    COOKIE_KEY: 'rcb_cookie_consent',
+    
+    hasConsent: () => {
+        return localStorage.getItem(CookieManager.COOKIE_KEY) === 'accepted';
+    },
+    
+    showBanner: () => {
+        const banner = document.getElementById('cookieBanner');
+        if (banner && !CookieManager.hasConsent()) {
+            banner.classList.add('show');
+        }
+    },
+    
+    hideBanner: () => {
+        const banner = document.getElementById('cookieBanner');
+        if (banner) {
+            banner.classList.remove('show');
+        }
+    },
+    
+    accept: () => {
+        localStorage.setItem(CookieManager.COOKIE_KEY, 'accepted');
+        CookieManager.hideBanner();
+        Utils.showNotification('Cookie preferences saved!', 'success');
+    },
+    
+    decline: () => {
+        // Clear existing data when declining
+        localStorage.removeItem(CONFIG.THEME_KEY);
+        localStorage.removeItem(CONFIG.NAME_KEY);
+        localStorage.removeItem(CONFIG.METRICS_KEY);
+        localStorage.setItem(CookieManager.COOKIE_KEY, 'declined');
+        CookieManager.hideBanner();
+        Utils.showNotification('Cookie preferences declined. Some features may be limited.', 'info');
+        
+        // Refresh the page to reset state
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    },
+    
+    init: () => {
+        // Show banner if no consent given yet
+        if (!CookieManager.hasConsent()) {
+            setTimeout(() => CookieManager.showBanner(), 1000);
+        }
+        
+        // Add event listeners
+        const acceptBtn = document.getElementById('cookieAccept');
+        const declineBtn = document.getElementById('cookieDecline');
+        
+        if (acceptBtn) {
+            acceptBtn.addEventListener('click', CookieManager.accept);
+        }
+        
+        if (declineBtn) {
+            declineBtn.addEventListener('click', CookieManager.decline);
+        }
     }
 };
 
