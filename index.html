@@ -32,14 +32,47 @@
 
     <!-- Gaming Splash / Loading Page -->
     <div id="splash" class="splash">
-        <div class="splash-inner">
-            <div class="logo"><span class="grad">RevChattyBox</span></div>
-            <div class="tag">Gaming Chat Hub</div>
-            <div class="loader">
-                <div class="bar"></div>
+        <!-- Animated background blobs -->
+        <div class="splash-bg">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+        </div>
+        
+        <!-- Main glassmorphism card -->
+        <div class="splash-card glass">
+            <!-- Header section -->
+            <div class="splash-header">
+                <div class="logo">
+                    <span class="grad">🎮 RevChattyBox</span>
+                </div>
+                <div class="tagline">Premium Gaming Chat Hub</div>
+                <div class="subtitle">Experience the future of gaming communication</div>
             </div>
-            <div class="enter">
-                <button id="enterBtn" class="btn btn-primary">Enter</button>
+            
+            <!-- Progress section -->
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span class="status-text" id="statusText">Initializing...</span>
+                    <span class="progress-percent" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Loading progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="progress-tips" id="progressTips">
+                    <span class="tip">Loading game assets...</span>
+                </div>
+            </div>
+            
+            <!-- Action buttons -->
+            <div class="splash-actions">
+                <button id="enterBtn" class="btn btn-primary" disabled>
+                    <span class="btn-text">Enter Gaming Hub</span>
+                    <span class="btn-icon">🚀</span>
+                </button>
+                <button id="skipBtn" class="btn btn-secondary">
+                    <span class="btn-text">Skip Loading</span>
+                </button>
             </div>
         </div>
     </div>

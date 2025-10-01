@@ -2247,6 +2247,159 @@ AdminManager.showUserMgmt = () => {
     });
 };
 
+// Premium Splash Screen Manager
+const SplashManager = {
+    progress: 0,
+    currentTip: 0,
+    loadingInterval: null,
+    tipInterval: null,
+    
+    tips: [
+        'Loading game assets...',
+        'Initializing chat system...',
+        'Setting up gaming hub...',
+        'Preparing multiplayer features...',
+        'Loading theme preferences...',
+        'Optimizing performance...',
+        'Almost ready...'
+    ],
+    
+    init: () => {
+        // Set up event listeners
+        const enterBtn = document.getElementById('enterBtn');
+        const skipBtn = document.getElementById('skipBtn');
+        
+        if (enterBtn) {
+            enterBtn.addEventListener('click', SplashManager.enterApp);
+        }
+        
+        if (skipBtn) {
+            skipBtn.addEventListener('click', SplashManager.skipLoading);
+        }
+        
+        // Start the loading simulation
+        SplashManager.startLoading();
+    },
+    
+    startLoading: () => {
+        // Simulate realistic loading progress
+        const loadingSteps = [
+            { progress: 15, tip: 0, delay: 800 },
+            { progress: 35, tip: 1, delay: 1200 },
+            { progress: 55, tip: 2, delay: 1000 },
+            { progress: 75, tip: 3, delay: 1100 },
+            { progress: 90, tip: 4, delay: 900 },
+            { progress: 95, tip: 5, delay: 700 },
+            { progress: 100, tip: 6, delay: 500 }
+        ];
+        
+        let currentStep = 0;
+        
+        const updateProgress = () => {
+            if (currentStep >= loadingSteps.length) {
+                SplashManager.completeLoading();
+                return;
+            }
+            
+            const step = loadingSteps[currentStep];
+            SplashManager.updateProgress(step.progress, step.tip);
+            currentStep++;
+            
+            setTimeout(updateProgress, step.delay);
+        };
+        
+        // Start the loading sequence
+        setTimeout(updateProgress, 500);
+    },
+    
+    updateProgress: (progress, tipIndex) => {
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const statusText = document.getElementById('statusText');
+        const progressTips = document.getElementById('progressTips');
+        const progressTrack = document.querySelector('.progress-track');
+        
+        if (progressBar) {
+            progressBar.style.width = progress + '%';
+        }
+        
+        if (progressPercent) {
+            progressPercent.textContent = Math.round(progress) + '%';
+        }
+        
+        if (progressTrack) {
+            progressTrack.setAttribute('aria-valuenow', Math.round(progress));
+        }
+        
+        if (tipIndex !== undefined && SplashManager.tips[tipIndex]) {
+            const tip = SplashManager.tips[tipIndex];
+            if (progressTips) {
+                progressTips.innerHTML = `<span class="tip">${tip}</span>`;
+            }
+            if (statusText) {
+                statusText.textContent = tip;
+            }
+        }
+        
+        // Enable enter button at 100%
+        if (progress >= 100) {
+            const enterBtn = document.getElementById('enterBtn');
+            if (enterBtn) {
+                enterBtn.disabled = false;
+                enterBtn.classList.add('pulse');
+            }
+        }
+    },
+    
+    completeLoading: () => {
+        const statusText = document.getElementById('statusText');
+        const progressTips = document.getElementById('progressTips');
+        
+        if (statusText) {
+            statusText.textContent = 'Ready to launch!';
+        }
+        
+        if (progressTips) {
+            progressTips.innerHTML = '<span class="tip">Welcome to RevChattyBox!</span>';
+        }
+        
+        // Add completion animation
+        const enterBtn = document.getElementById('enterBtn');
+        if (enterBtn) {
+            enterBtn.classList.add('ready');
+        }
+    },
+    
+    enterApp: () => {
+        const splash = document.getElementById('splash');
+        if (splash) {
+            // Add exit animation
+            splash.style.opacity = '0';
+            splash.style.transform = 'scale(0.9)';
+            splash.style.transition = 'all 0.5s ease';
+            
+            setTimeout(() => {
+                splash.style.display = 'none';
+                // Ask for name if not set
+                if (!NameManager.getName()) {
+                    NameManager.showModal();
+                }
+            }, 500);
+        }
+    },
+    
+    skipLoading: () => {
+        // Skip directly to completion
+        SplashManager.updateProgress(100, 6);
+        SplashManager.completeLoading();
+        
+        // Auto-enter after a short delay
+        setTimeout(() => {
+            SplashManager.enterApp();
+        }, 1000);
+    }
+};
+
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
     ChatManager.init();
@@ -2255,14 +2408,8 @@ document.addEventListener('DOMContentLoaded', () => {
     AdStats.initImpressions();
     AdManager.renderSlots();
     AdminManager.injectHeaderCodes();
-    // Splash enter
-    const enterBtn = document.getElementById('enterBtn');
-    if (enterBtn) enterBtn.addEventListener('click', () => {
-        const splash = document.getElementById('splash');
-        if (splash) splash.style.display = 'none';
-        // Ask for name if not set
-        if (!NameManager.getName()) NameManager.showModal();
-    });
+    // Enhanced splash screen with premium loading experience
+    SplashManager.init();
     
     // Update user count (simulate)
     setInterval(() => {
