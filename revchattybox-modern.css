@@ -430,10 +430,11 @@ html[data-theme="light"] .chat-container {
 
 .message.bot{
   background:
-    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
-    var(--glass-bg);
-  backdrop-filter:blur(10px) saturate(1.1);
-  border:1px solid var(--border);
+    linear-gradient(135deg, rgba(255,122,24,.08) 0%, transparent 100%),
+    var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
   color:var(--text);
   box-shadow:0 4px 15px rgba(0,0,0,.1);
 }
@@ -648,16 +649,17 @@ html[data-theme="light"] .modal-content {
 
 .game-item{
   background:
-    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
-    var(--glass-bg);
-  backdrop-filter:blur(15px) saturate(1.1);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:20px;
-  text-align:center;
-  cursor:pointer;
-  transition:all .2s ease;
-  box-shadow:0 8px 25px rgba(0,0,0,.1);
+    linear-gradient(135deg, rgba(255,122,24,.1) 0%, transparent 100%),
+    var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s ease;
+  box-shadow: var(--glass-shadow);
 }
 
 .game-item:hover{
@@ -719,10 +721,11 @@ html[data-theme="light"] .modal-content {
   width:100%;
   padding:10px;
   background:
-    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
-    var(--glass-bg);
-  backdrop-filter:blur(10px) saturate(1.1);
-  border:1px solid var(--border);
+    linear-gradient(135deg, rgba(255,122,24,.08) 0%, transparent 100%),
+    var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
   border-radius:8px;
   color:var(--text);
   font-size:14px;
@@ -745,10 +748,11 @@ html[data-theme="light"] .modal-content {
 
 .stat-card{
   background:
-    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
-    var(--glass-bg);
-  backdrop-filter:blur(15px) saturate(1.1);
-  border:1px solid var(--border);
+    linear-gradient(135deg, rgba(255,122,24,.08) 0%, transparent 100%),
+    var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
   border-radius:10px;
   padding:14px;
   box-shadow:0 8px 25px rgba(0,0,0,.1);
@@ -772,9 +776,10 @@ html[data-theme="light"] .modal-content {
   margin-bottom:20px;
   padding:16px;
   background:
-    linear-gradient(135deg, var(--glass-tint) 0%, transparent 100%),
-    var(--glass-bg);
-  backdrop-filter:blur(15px) saturate(1.1);
+    linear-gradient(135deg, rgba(255,122,24,.08) 0%, transparent 100%),
+    var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   border-radius:10px;
   border-left:3px solid var(--accent-1);
   box-shadow:0 8px 25px rgba(0,0,0,.1);
@@ -1113,8 +1118,39 @@ html[data-theme="light"] .modal-content{
   box-shadow: 0 30px 100px rgba(0,0,0,.12);
 }
 
+html[data-theme="light"] .game-item {
+  background:
+    linear-gradient(135deg, rgba(249,115,22,.08) 0%, transparent 100%),
+    var(--glass-bg-light);
+}
+
 html[data-theme="light"] .game-item:hover{
   box-shadow: 0 12px 30px rgba(0,0,0,.08);
+}
+
+html[data-theme="light"] .message.bot {
+  background:
+    linear-gradient(135deg, rgba(249,115,22,.06) 0%, transparent 100%),
+    var(--glass-bg-light);
+}
+
+html[data-theme="light"] .stat-card {
+  background:
+    linear-gradient(135deg, rgba(249,115,22,.06) 0%, transparent 100%),
+    var(--glass-bg-light);
+}
+
+html[data-theme="light"] .admin-section {
+  background:
+    linear-gradient(135deg, rgba(249,115,22,.06) 0%, transparent 100%),
+    var(--glass-bg-light);
+}
+
+html[data-theme="light"] .form-group input,
+html[data-theme="light"] .form-group textarea {
+  background:
+    linear-gradient(135deg, rgba(249,115,22,.06) 0%, transparent 100%),
+    var(--glass-bg-light);
 }
 
 html[data-theme="light"] .cell:hover{
