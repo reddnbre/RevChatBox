@@ -338,10 +338,16 @@ CREATE POLICY "Anyone can insert messages" ON messages
     FOR INSERT WITH CHECK (true);
 */
 
-// Initialize Supabase client properly
+// Initialize Supabase client properly (without auth)
 function createSupabaseClient() {
     if (window.supabase) {
-        return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+                detectSessionInUrl: false
+            }
+        });
     }
     return null;
 }
