@@ -338,14 +338,35 @@ CREATE POLICY "Anyone can insert messages" ON messages
     FOR INSERT WITH CHECK (true);
 */
 
-// Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialize Supabase client (with safety check)
+let supabase = null;
+
+// Wait for Supabase to load, then initialize
+function initSupabase() {
+    if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('Supabase client initialized');
+    } else {
+        console.warn('Supabase not loaded yet, retrying...');
+        setTimeout(initSupabase, 100);
+    }
+}
+
+// Start initialization
+initSupabase();
 
 // Real-time Chat System with Supabase
 const SupabaseChat = {
     // Send a message to Supabase
     async sendMessage(text, sender = 'user') {
         console.log('SupabaseChat.sendMessage called:', text, sender);
+        
+        // Check if Supabase is initialized
+        if (!supabase) {
+            console.warn('Supabase not initialized yet, using fallback');
+            this.addMessageToUI(text, sender);
+            return;
+        }
         
         try {
             const { data, error } = await supabase
@@ -403,6 +424,11 @@ const SupabaseChat = {
     
     // Load messages from Supabase
     async loadMessages() {
+        if (!supabase) {
+            console.warn('Supabase not initialized yet, skipping message load');
+            return;
+        }
+        
         try {
             const { data: messages, error } = await supabase
                 .from('messages')
@@ -437,6 +463,11 @@ const SupabaseChat = {
     
     // Set up real-time subscription
     async setupRealtimeSubscription() {
+        if (!supabase) {
+            console.warn('Supabase not initialized yet, skipping real-time setup');
+            return;
+        }
+        
         try {
             const channel = supabase
                 .channel('messages')
