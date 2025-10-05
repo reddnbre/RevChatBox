@@ -645,13 +645,19 @@ const ChatManager = {
         
         if (messageInput && sendBtn) {
             console.log('Setting up send button event listener');
+            console.log('Send button element:', sendBtn);
+            console.log('Message input element:', messageInput);
+            
             sendBtn.addEventListener('click', (e) => {
                 console.log('Send button clicked!', e);
+                e.preventDefault();
                 ChatManager.sendMessage();
             });
+            
             messageInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     console.log('Enter key pressed');
+                    e.preventDefault();
                     ChatManager.sendMessage();
                 }
             });
@@ -662,6 +668,18 @@ const ChatManager = {
         
         // Start the Supabase chat system
         SupabaseChat.init();
+        
+        // Add test function to window
+        window.testSendMessage = () => {
+            console.log('Testing send message...');
+            ChatManager.sendMessage();
+        };
+        
+        // Add direct test function
+        window.testChatDirect = () => {
+            console.log('Testing chat directly...');
+            SupabaseChat.addMessageToUI('Direct test message! 🎉', 'user');
+        };
     },
     
     sendMessage: () => {
