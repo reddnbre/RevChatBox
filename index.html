@@ -115,6 +115,7 @@
             <div class="composer-bar">
                 <div class="composer ibox">
                     <input type="text" id="messageInput" placeholder="Type your message..." maxlength="500">
+                    <button id="emojiBtn" class="btn btn-emoji" title="Add Emoji">😊</button>
                     <button id="sendBtn" class="btn btn-primary send">Send</button>
                 </div>
             </div>
@@ -164,6 +165,19 @@
                 <div id="gameContainer" class="game-container">
                     <!-- Game content will be loaded here -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emoji Picker Modal -->
+    <div id="emojiPicker" class="emoji-picker">
+        <div class="emoji-picker-content">
+            <div class="emoji-picker-header">
+                <h3>Choose an Emoji</h3>
+                <span class="close" onclick="EmojiManager.hidePicker()">&times;</span>
+            </div>
+            <div class="emoji-grid">
+                <!-- Emojis will be populated by JavaScript -->
             </div>
         </div>
     </div>

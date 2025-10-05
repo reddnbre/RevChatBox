@@ -1,13 +1,13 @@
-// RevChattyBox - Clean Working Version
-// Simple, reliable, and functional
+// RevChattyBox - Clean Chat-Only Version
+// Simple, reliable, and functional chat application
 
 // Configuration
 const CONFIG = {
     GAMES: [
-        { id: 'tictactoe', name: 'Tic Tac Toe', description: 'Classic 3x3 grid game' },
-        { id: 'battleship', name: 'Battleship', description: 'Strategic naval warfare' },
+        { id: 'hangman', name: 'Hangman', description: 'Guess the word letter by letter' },
         { id: 'connect4', name: 'Connect 4', description: 'Drop discs to win' },
-        { id: 'war', name: 'War', description: 'Card battle game' }
+        { id: 'war', name: 'War', description: 'Card battle game' },
+        { id: 'battleship', name: 'Battleship', description: 'Strategic naval warfare' }
     ],
     THEME_KEY: 'rcb_theme',
     NAME_KEY: 'rcb_display_name',
@@ -68,8 +68,36 @@ const Utils = {
 
 // Name Management
 const NameManager = {
-    getName: () => localStorage.getItem(CONFIG.NAME_KEY) || '',
-    setName: (name) => localStorage.setItem(CONFIG.NAME_KEY, name.trim().slice(0, 20)),
+    getName: () => {
+        // Check cookies first, then fallback to localStorage
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('rcb_display_name='));
+        
+        if (cookieValue) {
+            return decodeURIComponent(cookieValue.split('=')[1]);
+        }
+        
+        return localStorage.getItem(CONFIG.NAME_KEY) || '';
+    },
+    
+    setName: (name) => {
+        const trimmedName = name.trim().slice(0, 20);
+        
+        // Set in both cookies and localStorage for compatibility
+        // Cookie expires in 1 year
+        const expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 1);
+        document.cookie = `rcb_display_name=${encodeURIComponent(trimmedName)}; expires=${expires.toUTCString()}; path=/`;
+        
+        localStorage.setItem(CONFIG.NAME_KEY, trimmedName);
+    },
+    
+    clearName: () => {
+        // Clear from both cookies and localStorage
+        document.cookie = 'rcb_display_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        localStorage.removeItem(CONFIG.NAME_KEY);
+    },
     showModal: () => {
         const modal = document.getElementById('nameEntryModal');
         if (modal) modal.style.display = 'block';
@@ -165,7 +193,7 @@ const CookieManager = {
     accept: () => {
         localStorage.setItem(CookieManager.COOKIE_KEY, 'accepted');
         CookieManager.hideBanner();
-        Utils.showNotification('Cookie preferences saved!', 'success');
+        Utils.showNotification('Cookie preferences saved! Your display name and chat history will be preserved.', 'success');
     },
     
     decline: () => {
@@ -173,14 +201,39 @@ const CookieManager = {
         localStorage.removeItem(CONFIG.THEME_KEY);
         localStorage.removeItem(CONFIG.NAME_KEY);
         localStorage.removeItem(CONFIG.METRICS_KEY);
+        localStorage.removeItem('rcb_chat_messages');
         localStorage.setItem(CookieManager.COOKIE_KEY, 'declined');
         CookieManager.hideBanner();
-        Utils.showNotification('Cookie preferences declined. Some features may be limited.', 'info');
+        Utils.showNotification('Cookie preferences declined. All data has been cleared.', 'info');
+        
+        // Clear display name and chat
+        NameManager.clearName();
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+        }
         
         // Refresh the page to reset state
         setTimeout(() => {
             window.location.reload();
         }, 2000);
+    },
+    
+    // Add method to clear all data when cookies are deleted
+    clearAllData: () => {
+        localStorage.clear();
+        
+        // Clear display name
+        NameManager.clearName();
+        
+        // Clear chat messages
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+        }
+        
+        // Show name modal
+        NameManager.showModal();
     },
     
     init: () => {
@@ -224,13 +277,27 @@ const Metrics = {
     },
     save: () => localStorage.setItem(CONFIG.METRICS_KEY, JSON.stringify(metricsState)),
     addEvent: (type, data={}) => {
+        if (!metricsState || !metricsState.events) {
+            console.warn('Metrics not initialized, calling load()');
+            Metrics.load();
+        }
         metricsState.events.push({ type, data, ts: Date.now() });
         // Trim to last 5000 events
         if (metricsState.events.length > 5000) metricsState.events = metricsState.events.slice(-5000);
         Metrics.save();
     },
-    countEvents: (type, sinceMs = 0) => metricsState.events.filter(e => e.type === type && e.ts >= sinceMs).length,
+    countEvents: (type, sinceMs = 0) => {
+        if (!metricsState || !metricsState.events) {
+            console.warn('Metrics not initialized, calling load()');
+            Metrics.load();
+        }
+        return metricsState.events.filter(e => e.type === type && e.ts >= sinceMs).length;
+    },
     uniqueVisitorsSince: (sinceMs) => {
+        if (!metricsState || !metricsState.events) {
+            console.warn('Metrics not initialized, calling load()');
+            Metrics.load();
+        }
         const names = new Set();
         metricsState.events.forEach(e => {
             if (e.type === 'visit' && e.ts >= sinceMs && e.data && e.data.name) names.add(e.data.name);
@@ -238,6 +305,352 @@ const Metrics = {
         return names.size;
     },
     recordVisit: () => Metrics.addEvent('visit', { name: NameManager.getName() || 'anon' })
+};
+
+// Real-time Chat Sync System
+const ChatSync = {
+    CHAT_KEY: 'rcb_global_chat',
+    USERS_KEY: 'rcb_online_users',
+    SYNC_INTERVAL: 1000, // Check for new messages every second
+    
+    // Generate unique user ID
+    getUserId: () => {
+        let userId = localStorage.getItem('rcb_user_id');
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('rcb_user_id', userId);
+        }
+        return userId;
+    },
+    
+    // Get user's display name
+    getUserName: () => {
+        return NameManager.getName() || 'Anonymous';
+    },
+    
+    // Send message to global chat
+    sendMessage: (message) => {
+        console.log('ChatSync.sendMessage called with:', message);
+        const messages = ChatSync.getMessages();
+        const newMessage = {
+            id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            text: message,
+            sender: ChatSync.getUserName(),
+            userId: ChatSync.getUserId(),
+            timestamp: Date.now(),
+            type: 'user'
+        };
+        
+        console.log('New message object:', newMessage);
+        messages.push(newMessage);
+        
+        // Keep only last 200 messages
+        if (messages.length > 200) {
+            messages.splice(0, messages.length - 200);
+        }
+        
+        localStorage.setItem(ChatSync.CHAT_KEY, JSON.stringify(messages));
+        
+        // Update online users
+        ChatSync.updateUserPresence();
+    },
+    
+    // Get all messages
+    getMessages: () => {
+        try {
+            return JSON.parse(localStorage.getItem(ChatSync.CHAT_KEY) || '[]');
+        } catch {
+            return [];
+        }
+    },
+    
+    // Update user presence
+    updateUserPresence: () => {
+        const users = ChatSync.getOnlineUsers();
+        const currentUser = {
+            id: ChatSync.getUserId(),
+            name: ChatSync.getUserName(),
+            lastSeen: Date.now()
+        };
+        
+        // Update or add current user
+        const existingIndex = users.findIndex(u => u.id === currentUser.id);
+        if (existingIndex >= 0) {
+            users[existingIndex] = currentUser;
+        } else {
+            users.push(currentUser);
+        }
+        
+        // Remove users who haven't been seen for 5 minutes
+        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+        const activeUsers = users.filter(u => u.lastSeen > fiveMinutesAgo);
+        
+        localStorage.setItem(ChatSync.USERS_KEY, JSON.stringify(activeUsers));
+        ChatSync.updateUserCount(activeUsers.length);
+    },
+    
+    // Get online users
+    getOnlineUsers: () => {
+        try {
+            return JSON.parse(localStorage.getItem(ChatSync.USERS_KEY) || '[]');
+        } catch {
+            return [];
+        }
+    },
+    
+    // Update user count display
+    updateUserCount: (count) => {
+        const userCountEl = document.getElementById('userCount');
+        if (userCountEl) {
+            userCountEl.innerHTML = `<span class="dot"></span><span>Users: ${count}</span>`;
+        }
+    },
+    
+    // Check for new messages and update chat
+    syncMessages: () => {
+        const messages = ChatSync.getMessages();
+        const chatMessages = document.getElementById('chatMessages');
+        
+        if (!chatMessages) return;
+        
+        // Get current message count
+        const currentMessageCount = chatMessages.children.length;
+        
+        // If we have new messages, reload the chat
+        if (messages.length !== currentMessageCount) {
+            ChatSync.displayAllMessages(messages);
+        }
+        
+        // Update user presence
+        ChatSync.updateUserPresence();
+    },
+    
+    // Display all messages
+    displayAllMessages: (messages) => {
+        console.log('ChatSync.displayAllMessages called with:', messages.length, 'messages');
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) {
+            console.error('chatMessages element not found!');
+            return;
+        }
+        
+        // Filter messages from last 8 hours
+        const eightHoursAgo = Date.now() - (8 * 60 * 60 * 1000);
+        const recentMessages = messages.filter(msg => msg.timestamp > eightHoursAgo);
+        
+        console.log('Recent messages:', recentMessages.length);
+        chatMessages.innerHTML = '';
+        
+        recentMessages.forEach(msgData => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${msgData.type}`;
+            messageDiv.setAttribute('data-timestamp', msgData.timestamp);
+            messageDiv.setAttribute('data-message-id', msgData.id);
+            
+            const time = Utils.formatTime(new Date(msgData.timestamp));
+            const senderName = msgData.type === 'user' ? msgData.sender : 'Bot';
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="sender-name">${Utils.escapeHtml(senderName)}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${Utils.escapeHtml(msgData.text)}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+        });
+        
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    },
+    
+    // Start sync interval
+    startSync: () => {
+        ChatSync.updateUserPresence();
+        ChatSync.syncMessages();
+        
+        // Set up periodic sync
+        setInterval(ChatSync.syncMessages, ChatSync.SYNC_INTERVAL);
+        
+        // Initial message load
+        setTimeout(() => {
+            const messages = ChatSync.getMessages();
+            console.log('Initial messages loaded:', messages.length);
+            ChatSync.displayAllMessages(messages);
+            
+            // Add a test message if no messages exist
+            if (messages.length === 0) {
+                console.log('No messages found, adding test message');
+                ChatSync.sendMessage('Chat system is working! 🎉');
+            }
+        }, 500);
+        
+        // Add welcome message for new users
+        setTimeout(() => {
+            const messages = ChatSync.getMessages();
+            const hasWelcomeMessage = messages.some(msg => msg.text.includes('Welcome to RevChattyBox'));
+            
+            if (!hasWelcomeMessage) {
+                const welcomeMessage = {
+                    id: 'welcome_' + Date.now(),
+                    text: 'Welcome to RevChattyBox! 🎉 Start chatting with other users!',
+                    sender: 'System',
+                    userId: 'system',
+                    timestamp: Date.now(),
+                    type: 'bot'
+                };
+                
+                messages.unshift(welcomeMessage);
+                localStorage.setItem(ChatSync.CHAT_KEY, JSON.stringify(messages));
+                ChatSync.displayAllMessages(messages);
+            }
+        }, 1000);
+        
+        // Add test message functionality (for development)
+        window.testChat = () => {
+            const testMessages = [
+                'Testing the chat system! 📱',
+                'This is a test message from ' + ChatSync.getUserName(),
+                'Multi-user chat is working! 🎉',
+                'Can you see this message? 👀'
+            ];
+            
+            const randomMessage = testMessages[Math.floor(Math.random() * testMessages.length)];
+            ChatSync.sendMessage(randomMessage);
+            
+            console.log('Test message sent:', randomMessage);
+            console.log('Current users online:', ChatSync.getOnlineUsers().length);
+        };
+        
+        // Add manual send test
+        window.manualSend = (text) => {
+            console.log('Manual send called with:', text);
+            ChatSync.sendMessage(text || 'Manual test message');
+        };
+        
+        // Add display test
+        window.testDisplay = () => {
+            console.log('Testing message display...');
+            const messages = ChatSync.getMessages();
+            console.log('Current messages:', messages);
+            ChatSync.displayAllMessages(messages);
+        };
+        
+        // Log chat system status
+        console.log('ChatSync initialized');
+        console.log('User ID:', ChatSync.getUserId());
+        console.log('Display Name:', ChatSync.getUserName());
+        console.log('Online users:', ChatSync.getOnlineUsers().length);
+    }
+};
+
+// Emoji Management
+const EmojiManager = {
+    emojis: [
+        '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
+        '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
+        '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜',
+        '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏',
+        '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
+        '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠',
+        '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨',
+        '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥',
+        '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧',
+        '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
+        '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑',
+        '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻',
+        '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸',
+        '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '👋',
+        '🤚', '🖐️', '✋', '🖖', '👌', '🤏', '✌️', '🤞',
+        '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇',
+        '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏',
+        '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳',
+        '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃',
+        '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄', '💋',
+        '🩸', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤',
+        '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗',
+        '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️',
+        '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎',
+        '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏',
+        '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️',
+        '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️',
+        '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵',
+        '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘',
+        '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢',
+        '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭',
+        '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆',
+        '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅',
+        '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️',
+        '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🈳', '🈂️',
+        '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '⚧',
+        '🚻', '🚮', '🎦', '📶', '🈁', '🔣', '🔤', '🔡',
+        '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣',
+        '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣',
+        '9️⃣', '🔟'
+    ],
+    
+    init: () => {
+        const emojiBtn = document.getElementById('emojiBtn');
+        if (emojiBtn) {
+            emojiBtn.addEventListener('click', EmojiManager.showPicker);
+        }
+        
+        // Populate emoji grid
+        EmojiManager.populateEmojiGrid();
+    },
+    
+    showPicker: () => {
+        const picker = document.getElementById('emojiPicker');
+        if (picker) {
+            picker.style.display = 'block';
+        }
+    },
+    
+    hidePicker: () => {
+        const picker = document.getElementById('emojiPicker');
+        if (picker) {
+            picker.style.display = 'none';
+        }
+    },
+    
+    populateEmojiGrid: () => {
+        const emojiGrid = document.getElementById('emoji-grid');
+        if (!emojiGrid) return;
+        
+        emojiGrid.innerHTML = '';
+        
+        EmojiManager.emojis.forEach(emoji => {
+            const emojiBtn = document.createElement('button');
+            emojiBtn.className = 'emoji-btn';
+            emojiBtn.textContent = emoji;
+            emojiBtn.title = emoji;
+            
+            emojiBtn.addEventListener('click', () => {
+                EmojiManager.insertEmoji(emoji);
+                EmojiManager.hidePicker();
+            });
+            
+            emojiGrid.appendChild(emojiBtn);
+        });
+    },
+    
+    insertEmoji: (emoji) => {
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            const currentValue = messageInput.value;
+            const cursorPos = messageInput.selectionStart;
+            
+            const newValue = currentValue.slice(0, cursorPos) + emoji + currentValue.slice(cursorPos);
+            messageInput.value = newValue;
+            
+            // Set cursor position after the emoji
+            const newCursorPos = cursorPos + emoji.length;
+            messageInput.setSelectionRange(newCursorPos, newCursorPos);
+            
+            // Focus back to input
+            messageInput.focus();
+        }
+    }
 };
 
 // Chat Management
@@ -248,28 +661,74 @@ const ChatManager = {
         const pmBtn = document.getElementById('pmBtn');
         
         if (messageInput && sendBtn) {
-            sendBtn.addEventListener('click', ChatManager.sendMessage);
+            console.log('Setting up send button event listener');
+            sendBtn.addEventListener('click', (e) => {
+                console.log('Send button clicked!', e);
+                ChatManager.sendMessage();
+            });
             messageInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
+                    console.log('Enter key pressed');
                     ChatManager.sendMessage();
                 }
             });
+        } else {
+            console.error('messageInput or sendBtn not found:', messageInput, sendBtn);
         }
         if (pmBtn) pmBtn.addEventListener('click', PMManager.showModal);
+        
+        // Start the real-time chat sync system
+        ChatSync.startSync();
     },
     
     sendMessage: () => {
+        console.log('ChatManager.sendMessage called');
         const messageInput = document.getElementById('messageInput');
         const message = messageInput.value.trim();
         
+        console.log('Message input:', messageInput);
+        console.log('Message text:', message);
+        
         if (message && message.length <= 500) {
-            ChatManager.addMessage(message, 'user');
+            console.log('Sending message:', message);
+            // Send to global chat
+            ChatSync.sendMessage(message);
             messageInput.value = '';
             
-            // Simulate bot response
+            // Clear input focus
+            messageInput.blur();
+            
+            // Add bot response for fun
             setTimeout(() => {
-                ChatManager.addMessage('Thanks for your message!', 'bot');
-            }, 1000);
+                const botMessages = [
+                    'Thanks for your message!',
+                    'Cool! 👍',
+                    'Nice one!',
+                    'I see what you mean!',
+                    'Interesting point!'
+                ];
+                const randomBotMessage = botMessages[Math.floor(Math.random() * botMessages.length)];
+                
+                // Add bot message to global chat
+                const messages = ChatSync.getMessages();
+                const botMessage = {
+                    id: Date.now() + '_bot_' + Math.random().toString(36).substr(2, 9),
+                    text: randomBotMessage,
+                    sender: 'ChatBot',
+                    userId: 'bot',
+                    timestamp: Date.now(),
+                    type: 'bot'
+                };
+                
+                messages.push(botMessage);
+                
+                // Keep only last 200 messages
+                if (messages.length > 200) {
+                    messages.splice(0, messages.length - 200);
+                }
+                
+                localStorage.setItem(ChatSync.CHAT_KEY, JSON.stringify(messages));
+            }, 1500 + Math.random() * 2000); // Random delay between 1.5-3.5 seconds
         }
     },
     
@@ -278,7 +737,13 @@ const ChatManager = {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
         
-        const time = Utils.formatTime(new Date());
+        const now = new Date();
+        const timestamp = now.getTime(); // Store timestamp for cleanup
+        const time = Utils.formatTime(now);
+        
+        // Add timestamp as data attribute for cleanup tracking
+        messageDiv.setAttribute('data-timestamp', timestamp);
+        
         messageDiv.innerHTML = `
             <div class="message-content">${Utils.escapeHtml(message)}</div>
             <div class="message-time">${time}</div>
@@ -286,6 +751,86 @@ const ChatManager = {
         
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Store message in localStorage for persistence
+        ChatManager.saveMessageToStorage(message, sender, timestamp);
+    },
+    
+    saveMessageToStorage: (message, sender, timestamp) => {
+        const messages = ChatManager.getStoredMessages();
+        messages.push({ message, sender, timestamp });
+        
+        // Keep only last 100 messages in storage
+        if (messages.length > 100) {
+            messages.splice(0, messages.length - 100);
+        }
+        
+        localStorage.setItem('rcb_chat_messages', JSON.stringify(messages));
+    },
+    
+    getStoredMessages: () => {
+        try {
+            return JSON.parse(localStorage.getItem('rcb_chat_messages') || '[]');
+        } catch {
+            return [];
+        }
+    },
+    
+    loadStoredMessages: () => {
+        const messages = ChatManager.getStoredMessages();
+        const eightHoursAgo = Date.now() - (8 * 60 * 60 * 1000);
+        
+        // Filter out messages older than 8 hours
+        const recentMessages = messages.filter(msg => msg.timestamp > eightHoursAgo);
+        
+        // Clear old messages from storage
+        if (recentMessages.length !== messages.length) {
+            localStorage.setItem('rcb_chat_messages', JSON.stringify(recentMessages));
+        }
+        
+        // Display recent messages
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+            recentMessages.forEach(msg => {
+                ChatManager.displayStoredMessage(msg);
+            });
+        }
+    },
+    
+    displayStoredMessage: (msgData) => {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${msgData.sender}`;
+        messageDiv.setAttribute('data-timestamp', msgData.timestamp);
+        
+        const time = Utils.formatTime(new Date(msgData.timestamp));
+        messageDiv.innerHTML = `
+            <div class="message-content">${Utils.escapeHtml(msgData.message)}</div>
+            <div class="message-time">${time}</div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+    },
+    
+    cleanupOldMessages: () => {
+        const eightHoursAgo = Date.now() - (8 * 60 * 60 * 1000);
+        const chatMessages = document.getElementById('chatMessages');
+        
+        if (chatMessages) {
+            const messages = chatMessages.querySelectorAll('.message');
+            messages.forEach(msg => {
+                const timestamp = parseInt(msg.getAttribute('data-timestamp'));
+                if (timestamp && timestamp < eightHoursAgo) {
+                    msg.remove();
+                }
+            });
+        }
+        
+        // Clean up localStorage
+        const storedMessages = ChatManager.getStoredMessages();
+        const recentMessages = storedMessages.filter(msg => msg.timestamp > eightHoursAgo);
+        localStorage.setItem('rcb_chat_messages', JSON.stringify(recentMessages));
     }
 };
 
@@ -329,10 +874,6 @@ const GameManager = {
         if (gameHubBtn) {
             gameHubBtn.addEventListener('click', GameManager.showGameHub);
         }
-        // Init UI and metrics
-        UIManager.init();
-        Metrics.load();
-        Metrics.recordVisit();
     },
     
     showGameHub: () => {
@@ -385,15 +926,12 @@ const GameManager = {
             <div class="game-mode-selection">
                 <h3>Choose Game Mode</h3>
                 <div class="mode-buttons">
-                    <button class="btn btn-primary" onclick="GameManager.startMultiplayer('${gameId}')">
-                        🎮 PvP (Wait for Player)
-                    </button>
-                    <button class="btn btn-secondary" onclick="GameManager.startBotGame('${gameId}')">
+                    <button class="btn btn-primary" onclick="GameManager.startBotGame('${gameId}')">
                         🤖 Play vs Bot
                     </button>
                 </div>
                 <p class="mode-description">
-                    PvP: Wait 30 seconds for another player to join, or play against a bot.
+                    Play against the computer bot.
                 </p>
             </div>
         `;
@@ -402,81 +940,13 @@ const GameManager = {
             <div class="score-display">
                 <div class="score-item">
                     <span class="player-label">Game:</span>
-                    <span class="score">${CONFIG.GAMES.find(g => g.id === gameId)?.name || gameId}</span>
+                    <span class="score">${game.name}</span>
                 </div>
             </div>
         `;
     },
     
-    startMultiplayer: (gameId) => {
-        const gameContainer = document.getElementById('gameContainer');
-        const gameStatus = document.getElementById('gameStatus');
-        
-        // Generate unique room code
-        const roomCode = Math.random().toString(36).substr(2, 6).toUpperCase();
-        
-        gameContainer.innerHTML = `
-            <div class="waiting-room">
-                <h3>🎮 Waiting for Player</h3>
-                <div class="room-code">Room Code: <strong>${roomCode}</strong></div>
-                <div class="waiting-text">Share this code with another player to join!</div>
-                <div class="countdown" id="countdown">30</div>
-                <div class="waiting-message">Waiting for another player to join...</div>
-                <button class="btn btn-secondary" onclick="GameManager.startBotGame('${gameId}')">
-                    Skip Wait - Play Bot
-                </button>
-            </div>
-        `;
-        
-        // Start 30-second countdown
-        let timeLeft = 30;
-        const countdownElement = document.getElementById('countdown');
-        
-        const countdownInterval = setInterval(() => {
-            timeLeft--;
-            if (countdownElement) {
-                countdownElement.textContent = timeLeft;
-            }
-            
-            if (timeLeft <= 0) {
-                clearInterval(countdownInterval);
-                // No player joined, fall back to bot
-                GameManager.startBotGame(gameId);
-            }
-        }, 1000);
-        
-        // Simulate player joining after random delay (5-20 seconds)
-        const joinDelay = Math.random() * 15000 + 5000; // 5-20 seconds
-        
-        setTimeout(() => {
-            if (timeLeft > 0) {
-                clearInterval(countdownInterval);
-                GameManager.playerJoined(gameId, roomCode);
-            }
-        }, joinDelay);
-    },
-    
-    playerJoined: (gameId, roomCode) => {
-        const gameContainer = document.getElementById('gameContainer');
-        
-        gameContainer.innerHTML = `
-            <div class="player-joined">
-                <h3>🎉 Player Joined!</h3>
-                <div class="join-message">Another player has joined room ${roomCode}</div>
-                <div class="starting-text">Starting game...</div>
-            </div>
-        `;
-        
-        // Set multiplayer state
-        gameState.isMultiplayer = true;
-        
-        setTimeout(() => {
-            GameManager.loadGame(gameId);
-        }, 2000);
-    },
-    
     startBotGame: (gameId) => {
-        // Set single-player state
         gameState.isMultiplayer = false;
         GameManager.loadGame(gameId);
     },
@@ -489,7 +959,6 @@ const GameManager = {
     },
     
     backToGames: () => {
-        // Close game modal and reopen the Game Hub
         GameManager.hideGameModal();
         GameManager.showGameHub();
     },
@@ -499,20 +968,9 @@ const GameManager = {
         const gameStatus = document.getElementById('gameStatus');
         
         switch (gameId) {
-            case 'tictactoe':
-                gameContainer.innerHTML = `
-                    <div class="tic-tac-toe-board">
-                        <div class="game-grid-3x3">
-                            ${Array(9).fill().map((_, i) => `<div class="cell" data-index="${i}"></div>`).join('')}
-                        </div>
-                    </div>
-                `;
-                Metrics.addEvent('game_start', { game: 'tictactoe' });
-                TicTacToe.init();
-                break;
-            case 'battleship':
-                Metrics.addEvent('game_start', { game: 'battleship' });
-                Battleship.init();
+            case 'hangman':
+                Metrics.addEvent('game_start', { game: 'hangman' });
+                Hangman.init();
                 break;
             case 'connect4':
                 Metrics.addEvent('game_start', { game: 'connect4' });
@@ -522,60 +980,380 @@ const GameManager = {
                 Metrics.addEvent('game_start', { game: 'war' });
                 War.init();
                 break;
+            case 'battleship':
+                Metrics.addEvent('game_start', { game: 'battleship' });
+                Battleship.init();
+                break;
             default:
                 Utils.showNotification('Game not found!', 'error');
         }
     }
 };
 
-// Tic Tac Toe Game
-const TicTacToe = {
+// Hangman Game
+const Hangman = {
     init: () => {
         gameState = {
-            board: Array(9).fill(''),
-            currentPlayer: 'X',
+            word: '',
+            guessed: [],
+            wrongGuesses: 0,
+            maxWrong: 6,
             gameActive: true,
-            player1Score: 0,
-            player2Score: 0,
-            gameCount: 0,
-            isMultiplayer: gameState.isMultiplayer || false
+            score: 0,
+            gameCount: 0
         };
         
-        TicTacToe.updateScoreDisplay();
-        TicTacToe.clearBoard();
-        TicTacToe.attachEvents();
+        Hangman.selectRandomWord();
+        Hangman.updateDisplay();
+        Hangman.attachEvents();
     },
     
-    clearBoard: () => {
-        const cells = document.querySelectorAll('.tic-tac-toe-board .cell');
-        cells.forEach(cell => {
-            cell.textContent = '';
-            cell.style.background = 'white';
-            cell.style.color = 'black';
-        });
+    selectRandomWord: () => {
+        const words = [
+            'JAVASCRIPT', 'PROGRAMMING', 'COMPUTER', 'ALGORITHM', 'FUNCTION',
+            'VARIABLE', 'ARRAY', 'OBJECT', 'STRING', 'NUMBER', 'BOOLEAN',
+            'CHAT', 'GAME', 'PLAYER', 'SCORE', 'WINNER', 'LOSER', 'GUESS'
+        ];
+        gameState.word = words[Math.floor(Math.random() * words.length)];
     },
     
     attachEvents: () => {
-        const cells = document.querySelectorAll('.tic-tac-toe-board .cell');
+        const keyboard = document.getElementById('hangmanKeyboard');
+        if (keyboard) {
+            keyboard.innerHTML = '';
+            for (let i = 65; i <= 90; i++) {
+                const letter = String.fromCharCode(i);
+                const btn = document.createElement('button');
+                btn.className = 'key-btn';
+                btn.textContent = letter;
+                btn.onclick = () => Hangman.guessLetter(letter);
+                keyboard.appendChild(btn);
+            }
+        }
+    },
+    
+    guessLetter: (letter) => {
+        if (!gameState.gameActive || gameState.guessed.includes(letter)) return;
+        
+        gameState.guessed.push(letter);
+        
+        if (!gameState.word.includes(letter)) {
+            gameState.wrongGuesses++;
+        }
+        
+        Hangman.updateDisplay();
+        
+        if (Hangman.checkWin()) {
+            Hangman.endGame('win');
+        } else if (gameState.wrongGuesses >= gameState.maxWrong) {
+            Hangman.endGame('lose');
+        }
+    },
+    
+    checkWin: () => {
+        return gameState.word.split('').every(letter => gameState.guessed.includes(letter));
+    },
+    
+    updateDisplay: () => {
+        const gameContainer = document.getElementById('gameContainer');
+        const gameStatus = document.getElementById('gameStatus');
+        
+        // Display word with blanks
+        const displayWord = gameState.word.split('').map(letter => 
+            gameState.guessed.includes(letter) ? letter : '_'
+        ).join(' ');
+        
+        // Update keyboard buttons
+        const keyboard = document.getElementById('hangmanKeyboard');
+        if (keyboard) {
+            const buttons = keyboard.querySelectorAll('.key-btn');
+            buttons.forEach(btn => {
+                const letter = btn.textContent;
+                if (gameState.guessed.includes(letter)) {
+                    btn.disabled = true;
+                    btn.classList.add('guessed');
+                    if (gameState.word.includes(letter)) {
+                        btn.classList.add('correct');
+                    } else {
+                        btn.classList.add('wrong');
+                    }
+                }
+            });
+        }
+        
+        gameContainer.innerHTML = `
+            <div class="hangman-game">
+                <div class="hangman-display">
+                    <div class="word-display">${displayWord}</div>
+                    <div class="hangman-drawing">
+                        <svg width="200" height="250">
+                            <line x1="20" y1="220" x2="180" y2="220" stroke="var(--text)" stroke-width="3"/>
+                            <line x1="40" y1="220" x2="40" y2="20" stroke="var(--text)" stroke-width="3"/>
+                            <line x1="40" y1="20" x2="140" y2="20" stroke="var(--text)" stroke-width="3"/>
+                            <line x1="140" y1="20" x2="140" y2="40" stroke="var(--text)" stroke-width="3"/>
+                            ${gameState.wrongGuesses >= 1 ? '<circle cx="140" cy="60" r="20" stroke="var(--text)" stroke-width="2" fill="none"/>' : ''}
+                            ${gameState.wrongGuesses >= 2 ? '<line x1="140" y1="80" x2="140" y2="140" stroke="var(--text)" stroke-width="3"/>' : ''}
+                            ${gameState.wrongGuesses >= 3 ? '<line x1="140" y1="100" x2="120" y2="120" stroke="var(--text)" stroke-width="3"/>' : ''}
+                            ${gameState.wrongGuesses >= 4 ? '<line x1="140" y1="100" x2="160" y2="120" stroke="var(--text)" stroke-width="3"/>' : ''}
+                            ${gameState.wrongGuesses >= 5 ? '<line x1="140" y1="140" x2="120" y2="160" stroke="var(--text)" stroke-width="3"/>' : ''}
+                            ${gameState.wrongGuesses >= 6 ? '<line x1="140" y1="140" x2="160" y2="160" stroke="var(--text)" stroke-width="3"/>' : ''}
+                        </svg>
+                    </div>
+                </div>
+                <div id="hangmanKeyboard" class="hangman-keyboard"></div>
+                <div class="game-info">
+                    <p>Wrong guesses: ${gameState.wrongGuesses}/${gameState.maxWrong}</p>
+                    <p>Guessed letters: ${gameState.guessed.join(', ')}</p>
+                </div>
+            </div>
+        `;
+        
+        gameStatus.innerHTML = `
+            <div class="score-display">
+                <div class="score-item">
+                    <span class="player-label">Score:</span>
+                    <span class="score">${gameState.score}</span>
+                </div>
+                <div class="score-item">
+                    <span class="player-label">Games:</span>
+                    <span class="score">${gameState.gameCount}</span>
+                </div>
+            </div>
+        `;
+        
+        Hangman.attachEvents();
+    },
+    
+    endGame: (result) => {
+        gameState.gameActive = false;
+        gameState.gameCount++;
+        
+        const gameContainer = document.getElementById('gameContainer');
+        const message = result === 'win' ? '🎉 You Won! 🎉' : '😔 Game Over!';
+        
+        if (result === 'win') {
+            gameState.score += 100;
+        }
+        
+        gameContainer.innerHTML = `
+            <div class="game-over-screen">
+                <h2>${message}</h2>
+                <div class="final-result">
+                    <p>The word was: <strong>${gameState.word}</strong></p>
+                    <p>Final Score: ${gameState.score}</p>
+                    <p>Games Played: ${gameState.gameCount}</p>
+                </div>
+                <div class="game-actions">
+                    <button class="btn btn-primary" onclick="Hangman.init()">Play Again</button>
+                    <button class="btn btn-secondary" onclick="GameManager.backToGames()">Back to Games</button>
+                </div>
+            </div>
+        `;
+    }
+};
+
+// Connect 4 Game
+const Connect4 = {
+    init: () => {
+        gameState = {
+            board: Array(42).fill(''),
+            currentPlayer: 'player1',
+            gamePhase: 'playing',
+            player1Score: 0,
+            player2Score: 0,
+            gameCount: 0,
+            isMultiplayer: false
+        };
+        
+        Connect4.renderBoard();
+        Connect4.updateScoreDisplay();
+    },
+    
+    renderBoard: () => {
+        const gameContainer = document.getElementById('gameContainer');
+        const board = document.createElement('div');
+        board.className = 'connect4-board';
+        board.innerHTML = '';
+        
+        for (let row = 0; row < 6; row++) {
+            for (let col = 0; col < 7; col++) {
+                const cell = document.createElement('div');
+                cell.className = 'connect4-cell';
+                cell.dataset.row = row;
+                cell.dataset.col = col;
+                cell.addEventListener('click', () => Connect4.handleCellClick(row * 7 + col));
+                board.appendChild(cell);
+            }
+        }
+        
+        gameContainer.innerHTML = `
+            <div class="connect4-game">
+                <div class="connect4-board-container">
+                    ${board.outerHTML}
+                </div>
+            </div>
+        `;
+        
+        Connect4.attachEvents();
+    },
+    
+    attachEvents: () => {
+        const cells = document.querySelectorAll('.connect4-cell');
         cells.forEach((cell, index) => {
-            cell.addEventListener('click', () => TicTacToe.handleCellClick(index));
+            cell.addEventListener('click', () => Connect4.handleCellClick(index));
+        });
+    },
+    
+    handleCellClick: (index) => {
+        if (gameState.gamePhase !== 'playing' || gameState.currentPlayer !== 'player1') return;
+        
+        const col = index % 7;
+        const row = Connect4.getLowestEmptyRow(col);
+        if (row === -1) return; // Column is full
+        
+        const cellIndex = row * 7 + col;
+        gameState.board[cellIndex] = 'player1';
+        
+        Connect4.updateDisplay();
+        
+        if (Connect4.checkWinner()) {
+            Connect4.endGame('player1');
+            return;
+        }
+        
+        if (Connect4.checkDraw()) {
+            Connect4.endGame('draw');
+            return;
+        }
+        
+        gameState.currentPlayer = 'player2';
+        Connect4.updateScoreDisplay();
+        
+        // Bot move
+        setTimeout(() => Connect4.botMove(), 1000);
+    },
+    
+    getLowestEmptyRow: (col) => {
+        for (let row = 5; row >= 0; row--) {
+            if (gameState.board[row * 7 + col] === '') {
+                return row;
+            }
+        }
+        return -1;
+    },
+    
+    botMove: () => {
+        if (gameState.gamePhase !== 'playing' || gameState.currentPlayer !== 'player2') return;
+        
+        // Simple AI: try to win, then block player, then random
+        let move = Connect4.getWinningMove('player2');
+        if (move === -1) {
+            move = Connect4.getWinningMove('player1'); // Block player
+        }
+        if (move === -1) {
+            // Random move
+            const availableCols = [];
+            for (let col = 0; col < 7; col++) {
+                if (Connect4.getLowestEmptyRow(col) !== -1) {
+                    availableCols.push(col);
+                }
+            }
+            move = availableCols[Math.floor(Math.random() * availableCols.length)];
+        }
+        
+        const row = Connect4.getLowestEmptyRow(move);
+        const cellIndex = row * 7 + move;
+        gameState.board[cellIndex] = 'player2';
+        
+        Connect4.updateDisplay();
+        
+        if (Connect4.checkWinner()) {
+            Connect4.endGame('player2');
+            return;
+        }
+        
+        if (Connect4.checkDraw()) {
+            Connect4.endGame('draw');
+            return;
+        }
+        
+        gameState.currentPlayer = 'player1';
+        Connect4.updateScoreDisplay();
+    },
+    
+    getWinningMove: (player) => {
+        for (let col = 0; col < 7; col++) {
+            const row = Connect4.getLowestEmptyRow(col);
+            if (row !== -1) {
+                const cellIndex = row * 7 + col;
+                gameState.board[cellIndex] = player;
+                if (Connect4.checkWinner()) {
+                    gameState.board[cellIndex] = '';
+                    return col;
+                }
+                gameState.board[cellIndex] = '';
+            }
+        }
+        return -1;
+    },
+    
+    checkWinner: () => {
+        const directions = [
+            [1, 0], [0, 1], [1, 1], [1, -1] // horizontal, vertical, diagonal
+        ];
+        
+        for (let row = 0; row < 6; row++) {
+            for (let col = 0; col < 7; col++) {
+                const player = gameState.board[row * 7 + col];
+                if (player === '') continue;
+                
+                for (let [dr, dc] of directions) {
+                    let count = 1;
+                    let r = row + dr, c = col + dc;
+                    
+                    while (r >= 0 && r < 6 && c >= 0 && c < 7 && 
+                           gameState.board[r * 7 + c] === player) {
+                        count++;
+                        r += dr;
+                        c += dc;
+                    }
+                    
+                    if (count >= 4) return true;
+                }
+            }
+        }
+        return false;
+    },
+    
+    checkDraw: () => {
+        return gameState.board.every(cell => cell !== '');
+    },
+    
+    updateDisplay: () => {
+        const cells = document.querySelectorAll('.connect4-cell');
+        cells.forEach((cell, index) => {
+            const player = gameState.board[index];
+            cell.className = 'connect4-cell';
+            if (player === 'player1') {
+                cell.classList.add('player1');
+            } else if (player === 'player2') {
+                cell.classList.add('player2');
+            }
         });
     },
     
     updateScoreDisplay: () => {
         const gameStatus = document.getElementById('gameStatus');
-        const player1Name = gameState.isMultiplayer ? 'Player 1' : 'You';
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        const currentPlayerName = gameState.currentPlayer === 'X' ? player1Name : player2Name;
+        const currentPlayerName = gameState.currentPlayer === 'player1' ? 'You' : 'Bot';
         
         gameStatus.innerHTML = `
             <div class="score-display">
                 <div class="score-item">
-                    <span class="player-label">${player1Name} (X):</span>
+                    <span class="player-label">You:</span>
                     <span class="score">${gameState.player1Score}</span>
                 </div>
                 <div class="score-item">
-                    <span class="player-label">${player2Name} (O):</span>
+                    <span class="player-label">Bot:</span>
                     <span class="score">${gameState.player2Score}</span>
                 </div>
                 <div class="score-item">
@@ -583,150 +1361,280 @@ const TicTacToe = {
                     <span class="score">${gameState.gameCount}</span>
                 </div>
             </div>
-            <div class="current-player">Current Player: ${currentPlayerName} (${gameState.currentPlayer})</div>
+            <div class="current-player">Current Turn: ${currentPlayerName}</div>
         `;
     },
     
-    handleCellClick: (index) => {
-        if (!gameState.gameActive || gameState.board[index] !== '') return;
-        
-        gameState.board[index] = gameState.currentPlayer;
-        const cell = document.querySelector(`[data-index="${index}"]`);
-        if (cell) {
-            cell.textContent = gameState.currentPlayer;
-            cell.style.background = gameState.currentPlayer === 'X' ? '#007bff' : '#dc3545';
-            cell.style.color = 'white';
-        }
-        
-        if (TicTacToe.checkWinner()) {
-            TicTacToe.highlightWinningCells();
-            TicTacToe.endGame(gameState.currentPlayer === 'X' ? 'player' : 'bot');
-            return;
-        }
-        
-        if (TicTacToe.checkDraw()) {
-            TicTacToe.endGame('draw');
-            return;
-        }
-        
-        gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
-        TicTacToe.updateScoreDisplay();
-        
-        // Bot move only in single-player mode
-        if (!gameState.isMultiplayer && gameState.currentPlayer === 'O') {
-            setTimeout(() => TicTacToe.botMove(), 800);
-        }
-    },
-    
-    botMove: () => {
-        if (!gameState.gameActive) return;
-        
-        const emptyCells = gameState.board.map((cell, index) => cell === '' ? index : null).filter(val => val !== null);
-        const moveIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-        
-        if (moveIndex !== undefined) {
-            TicTacToe.handleCellClick(moveIndex);
-        }
-    },
-    
-    highlightWinningCells: () => {
-        const winPatterns = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
-            [0, 4, 8], [2, 4, 6] // Diagonals
-        ];
-        
-        for (let pattern of winPatterns) {
-            const [a, b, c] = pattern;
-            if (gameState.board[a] && gameState.board[a] === gameState.board[b] && gameState.board[a] === gameState.board[c]) {
-                pattern.forEach(index => {
-                    const cell = document.querySelector(`[data-index="${index}"]`);
-                    if (cell) {
-                        cell.style.background = '#28a745';
-                        cell.style.animation = 'pulse 0.5s ease-in-out 3';
-                    }
-                });
-                break;
-            }
-        }
-    },
-    
     endGame: (result) => {
-        gameState.gameActive = false;
+        gameState.gamePhase = 'ended';
         gameState.gameCount++;
         
-        let message = '';
-        let type = 'info';
-        
-        switch (result) {
-            case 'player':
-                gameState.player1Score++;
-                const winnerName = gameState.isMultiplayer ? 'Player 1' : 'You';
-                message = `🎉 Congratulations! ${winnerName} Wins! 🎉`;
-                type = 'success';
-                break;
-            case 'bot':
-                gameState.player2Score++;
-                const loserName = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-                message = `😔 ${loserName} Wins! Better luck next time!`;
-                type = 'error';
-                break;
-            case 'draw':
-                message = '🤝 It\'s a Draw!';
-                type = 'info';
-                break;
+        if (result === 'player1') {
+            gameState.player1Score++;
+        } else if (result === 'player2') {
+            gameState.player2Score++;
         }
         
-        Utils.showNotification(message, type);
-        TicTacToe.updateScoreDisplay();
-        
-        setTimeout(() => {
-            TicTacToe.showGameOverScreen(result);
-        }, 2000);
-    },
-    
-    showGameOverScreen: (result) => {
         const gameContainer = document.getElementById('gameContainer');
+        const message = result === 'player1' ? '🎉 You Won! 🎉' : 
+                       result === 'player2' ? '😔 Bot Won!' : 
+                       '🤝 It\'s a Draw!';
+        
         gameContainer.innerHTML = `
             <div class="game-over-screen">
-                <h2>Game Over!</h2>
-                <div class="final-result">
-                    ${result === 'player' ? '🎉 You Won! 🎉' : 
-                      result === 'bot' ? '😔 Bot Won!' : 
-                      '🤝 It\'s a Draw!'}
-                </div>
+                <h2>${message}</h2>
                 <div class="score-summary">
-                    <div>${gameState.isMultiplayer ? 'Player 1' : 'Your'} Score: ${gameState.player1Score}</div>
-                    <div>${gameState.isMultiplayer ? 'Player 2' : 'Bot'} Score: ${gameState.player2Score}</div>
+                    <div>Your Score: ${gameState.player1Score}</div>
+                    <div>Bot Score: ${gameState.player2Score}</div>
                     <div>Games Played: ${gameState.gameCount}</div>
                 </div>
                 <div class="game-actions">
-                    <button class="btn btn-primary" onclick="TicTacToe.init()">Play Again</button>
+                    <button class="btn btn-primary" onclick="Connect4.init()">Play Again</button>
                     <button class="btn btn-secondary" onclick="GameManager.backToGames()">Back to Games</button>
+                </div>
+            </div>
+        `;
+    }
+};
+
+// War Card Game
+const War = {
+    init: () => {
+        gameState = {
+            player1Cards: [],
+            player2Cards: [],
+            currentPlayer: 'player1',
+            gamePhase: 'playing',
+            player1Score: 0,
+            player2Score: 0,
+            gameCount: 0,
+            isMultiplayer: false,
+            gameDeck: []
+        };
+        
+        War.createDeck();
+        War.dealCards();
+        War.updateDisplay();
+    },
+    
+    createDeck: () => {
+        const suits = ['♠', '♥', '♦', '♣'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        gameState.gameDeck = [];
+        
+        for (let suit of suits) {
+            for (let value of values) {
+                gameState.gameDeck.push({
+                    suit: suit,
+                    value: value,
+                    rank: War.getCardRank(value)
+                });
+            }
+        }
+        
+        // Shuffle deck
+        for (let i = gameState.gameDeck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [gameState.gameDeck[i], gameState.gameDeck[j]] = [gameState.gameDeck[j], gameState.gameDeck[i]];
+        }
+    },
+    
+    getCardRank: (value) => {
+        const ranks = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+        return ranks[value];
+    },
+    
+    dealCards: () => {
+        gameState.player1Cards = gameState.gameDeck.slice(0, 26);
+        gameState.player2Cards = gameState.gameDeck.slice(26);
+    },
+    
+    updateDisplay: () => {
+        const gameContainer = document.getElementById('gameContainer');
+        const gameStatus = document.getElementById('gameStatus');
+        
+        gameContainer.innerHTML = `
+            <div class="war-game">
+                <div class="war-header">
+                    <h3>War Card Game</h3>
+                    <p>Click "Draw Card" to play a round</p>
+                </div>
+                
+                <div class="war-play-area">
+                    <div class="player-area">
+                        <div class="player-label">Your Cards: ${gameState.player1Cards.length}</div>
+                        <div class="card-pile player1-pile"></div>
+                    </div>
+                    
+                    <div class="center-area">
+                        <button id="drawCardBtn" class="btn btn-primary" onclick="War.playRound()">
+                            Draw Card
+                        </button>
+                        <div id="warResult" class="war-result"></div>
+                    </div>
+                    
+                    <div class="player-area">
+                        <div class="player-label">Bot Cards: ${gameState.player2Cards.length}</div>
+                        <div class="card-pile player2-pile"></div>
+                    </div>
+                </div>
+                
+                <div class="war-stats">
+                    <div class="stat">
+                        <span>Your Score:</span>
+                        <span>${gameState.player1Score}</span>
+                    </div>
+                    <div class="stat">
+                        <span>Bot Score:</span>
+                        <span>${gameState.player2Score}</span>
+                    </div>
+                    <div class="stat">
+                        <span>Games:</span>
+                        <span>${gameState.gameCount}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        gameStatus.innerHTML = `
+            <div class="score-display">
+                <div class="score-item">
+                    <span class="player-label">Your Cards:</span>
+                    <span class="score">${gameState.player1Cards.length}</span>
+                </div>
+                <div class="score-item">
+                    <span class="player-label">Bot Cards:</span>
+                    <span class="score">${gameState.player2Cards.length}</span>
                 </div>
             </div>
         `;
     },
     
-    checkWinner: () => {
-        const winPatterns = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
-            [0, 4, 8], [2, 4, 6] // Diagonals
-        ];
+    playRound: () => {
+        if (gameState.player1Cards.length === 0 || gameState.player2Cards.length === 0) {
+            War.endGame();
+            return;
+        }
         
-        return winPatterns.some(pattern => {
-            const [a, b, c] = pattern;
-            return gameState.board[a] && gameState.board[a] === gameState.board[b] && gameState.board[a] === gameState.board[c];
-        });
+        const player1Card = gameState.player1Cards.shift();
+        const player2Card = gameState.player2Cards.shift();
+        
+        const result = War.compareCards(player1Card, player2Card);
+        const warResult = document.getElementById('warResult');
+        
+        warResult.innerHTML = `
+            <div class="card-comparison">
+                <div class="card-display">
+                    <div class="card player1-card">
+                        <div class="card-value">${player1Card.value}</div>
+                        <div class="card-suit">${player1Card.suit}</div>
+                    </div>
+                    <div class="vs">VS</div>
+                    <div class="card player2-card">
+                        <div class="card-value">${player2Card.value}</div>
+                        <div class="card-suit">${player2Card.suit}</div>
+                    </div>
+                </div>
+                <div class="round-result">${result.message}</div>
+            </div>
+        `;
+        
+        if (result.winner === 'player1') {
+            gameState.player1Cards.push(player1Card, player2Card);
+            gameState.player1Score++;
+        } else if (result.winner === 'player2') {
+            gameState.player2Cards.push(player1Card, player2Card);
+            gameState.player2Score++;
+        } else {
+            // War! - both cards go to winner of next round
+            gameState.warCards = [player1Card, player2Card];
+            War.playWarRound();
+        }
+        
+        War.updateDisplay();
+        
+        // Check if game is over
+        if (gameState.player1Cards.length === 0 || gameState.player2Cards.length === 0) {
+            setTimeout(() => War.endGame(), 1000);
+        }
     },
     
-    checkDraw: () => {
-        return gameState.board.every(cell => cell !== '');
+    compareCards: (card1, card2) => {
+        if (card1.rank > card2.rank) {
+            return { winner: 'player1', message: 'You win this round!' };
+        } else if (card2.rank > card1.rank) {
+            return { winner: 'player2', message: 'Bot wins this round!' };
+        } else {
+            return { winner: 'war', message: 'WAR! Both cards have equal value!' };
+        }
+    },
+    
+    playWarRound: () => {
+        if (gameState.player1Cards.length < 2 || gameState.player2Cards.length < 2) {
+            // Not enough cards for war
+            if (gameState.player1Cards.length >= gameState.player2Cards.length) {
+                gameState.player1Cards.push(...gameState.warCards);
+                gameState.player1Score++;
+            } else {
+                gameState.player2Cards.push(...gameState.warCards);
+                gameState.player2Score++;
+            }
+            gameState.warCards = [];
+            return;
+        }
+        
+        // Play war round
+        const player1WarCard = gameState.player1Cards.shift();
+        const player2WarCard = gameState.player2Cards.shift();
+        
+        gameState.warCards.push(player1WarCard, player2WarCard);
+        
+        const result = War.compareCards(player1WarCard, player2WarCard);
+        
+        if (result.winner === 'player1') {
+            gameState.player1Cards.push(...gameState.warCards);
+            gameState.player1Score++;
+        } else if (result.winner === 'player2') {
+            gameState.player2Cards.push(...gameState.warCards);
+            gameState.player2Score++;
+        } else {
+            // Another war
+            War.playWarRound();
+        }
+        
+        gameState.warCards = [];
+    },
+    
+    endGame: () => {
+        gameState.gamePhase = 'ended';
+        gameState.gameCount++;
+        
+        const winner = gameState.player1Cards.length > gameState.player2Cards.length ? 'You' : 
+                      gameState.player2Cards.length > gameState.player1Cards.length ? 'Bot' : 'Draw';
+        
+        const gameContainer = document.getElementById('gameContainer');
+        const message = winner === 'You' ? '🎉 You Won! 🎉' : 
+                       winner === 'Bot' ? '😔 Bot Won!' : 
+                       '🤝 It\'s a Draw!';
+        
+        gameContainer.innerHTML = `
+            <div class="game-over-screen">
+                <h2>${message}</h2>
+                <div class="score-summary">
+                    <div>Final Score - You: ${gameState.player1Score}, Bot: ${gameState.player2Score}</div>
+                    <div>Cards Remaining - You: ${gameState.player1Cards.length}, Bot: ${gameState.player2Cards.length}</div>
+                    <div>Games Played: ${gameState.gameCount}</div>
+                </div>
+                <div class="game-actions">
+                    <button class="btn btn-primary" onclick="War.init()">Play Again</button>
+                    <button class="btn btn-secondary" onclick="GameManager.backToGames()">Back to Games</button>
+                </div>
+            </div>
+        `;
     }
 };
 
-// Battleship Game - FIXED VERSION
+// Battleship Game
 const Battleship = {
     init: () => {
         gameState = {
@@ -761,22 +1669,15 @@ const Battleship = {
             player1Score: 0,
             player2Score: 0,
             gameCount: 0,
-            isMultiplayer: gameState.isMultiplayer || false
+            isMultiplayer: false
         };
         
-        Battleship.startSetup();
-    },
-    
-    startSetup: () => {
-        gameState.gamePhase = 'setup';
-        gameState.currentPlayer = 'player1';
-        gameState.currentShipIndex = 0;
         Battleship.showSetupScreen();
     },
     
     showSetupScreen: () => {
         const gameContainer = document.getElementById('gameContainer');
-        const currentPlayerName = 'Player 1';
+        const currentPlayerName = 'Player';
         const currentShip = gameState.player1Ships[gameState.currentShipIndex];
         
         gameContainer.innerHTML = `
@@ -811,32 +1712,7 @@ const Battleship = {
             </div>
         `;
         
-        Battleship.attachSetupEvents();
         Battleship.updateSetupDisplay();
-    },
-    
-    attachSetupEvents: () => {
-        document.querySelectorAll('.setup-cell').forEach((cell, index) => {
-            cell.addEventListener('click', () => Battleship.placeShipAt(index));
-            cell.addEventListener('mouseenter', () => Battleship.showPreview(index));
-            cell.addEventListener('mouseleave', () => Battleship.clearPreview());
-        });
-    },
-    
-    updateSetupDisplay: () => {
-        const currentBoard = gameState.player1Board;
-        
-        document.querySelectorAll('.setup-cell').forEach((cell, index) => {
-            if (currentBoard[index] === 'ship') {
-                cell.style.background = '#007bff';
-                cell.textContent = '🚢';
-                cell.style.color = 'white';
-            } else {
-                cell.style.background = '';
-                cell.textContent = '';
-                cell.style.color = '';
-            }
-        });
     },
     
     handleSetupClick: (index) => {
@@ -849,7 +1725,6 @@ const Battleship = {
         const col = index % 10;
         const orientation = gameState.shipOrientation;
         
-        // Check if ship can be placed at this position
         if (Battleship.canPlaceShip(currentShip, row, col, orientation)) {
             Battleship.placeShip(currentShip, row, col, orientation);
             Battleship.showSetupScreen();
@@ -862,7 +1737,6 @@ const Battleship = {
         const board = gameState.player1Board;
         const size = ship.size;
         
-        // Check bounds
         if (orientation === 'horizontal') {
             if (col + size > 10) return false;
             for (let i = 0; i < size; i++) {
@@ -897,7 +1771,6 @@ const Battleship = {
         ship.placed = true;
         gameState.currentShipIndex++;
         
-        // Check if all ships are placed
         if (gameState.currentShipIndex >= gameState.player1Ships.length) {
             Battleship.startGame();
         }
@@ -912,1143 +1785,282 @@ const Battleship = {
         const currentBoard = gameState.player1Board;
         const currentShips = gameState.player1Ships;
         
-        // Clear board
         currentBoard.fill('');
         currentShips.forEach(ship => {
             ship.positions = [];
             ship.placed = false;
         });
         
-        // Place all ships randomly
+        gameState.currentShipIndex = 0;
+        
         currentShips.forEach(ship => {
             let placed = false;
             let attempts = 0;
+            
             while (!placed && attempts < 100) {
-                const startPos = Math.floor(Math.random() * 100);
-                const horizontal = Math.random() < 0.5;
+                const row = Math.floor(Math.random() * 10);
+                const col = Math.floor(Math.random() * 10);
+                const orientation = Math.random() < 0.5 ? 'horizontal' : 'vertical';
                 
-                if (Battleship.canPlaceShip(currentBoard, startPos, ship.size, horizontal)) {
-                    Battleship.placeShipOnBoard(currentBoard, startPos, ship.size, horizontal, ship);
-                    ship.placed = true;
+                if (Battleship.canPlaceShip(ship, row, col, orientation)) {
+                    Battleship.placeShip(ship, row, col, orientation);
                     placed = true;
                 }
                 attempts++;
+            }
+            
+            if (!placed) {
+                Utils.showNotification('Could not place all ships randomly!', 'error');
+                Battleship.showSetupScreen();
+                return;
             }
         });
         
         Battleship.startGame();
     },
     
-    showPreview: (index) => {
-        Battleship.clearPreview();
-        
-        const currentShip = gameState.player1Ships[gameState.currentShipIndex];
-        const currentBoard = gameState.player1Board;
-        
-        if (Battleship.canPlaceShip(currentBoard, index, currentShip.size, gameState.shipOrientation === 'horizontal')) {
-            // Show green preview
-            for (let i = 0; i < currentShip.size; i++) {
-                const pos = gameState.shipOrientation === 'horizontal' ? index + i : index + i * 10;
-                if (pos < 100) {
-                    const cell = document.querySelector(`[data-index="${pos}"]`);
-                    if (cell && currentBoard[pos] === '') {
-                        cell.style.background = '#90EE90';
-                        cell.style.opacity = '0.7';
-                    }
-                }
-            }
-        } else {
-            // Show red preview for invalid placement
-            for (let i = 0; i < currentShip.size; i++) {
-                const pos = gameState.shipOrientation === 'horizontal' ? index + i : index + i * 10;
-                if (pos < 100) {
-                    const cell = document.querySelector(`[data-index="${pos}"]`);
-                    if (cell) {
-                        cell.style.background = '#ff6b6b';
-                        cell.style.opacity = '0.7';
-                    }
-                }
-            }
-        }
+    startGame: () => {
+        gameState.gamePhase = 'playing';
+        Battleship.placeBotShips();
+        Battleship.showGameBoard();
     },
     
-    clearPreview: () => {
-        document.querySelectorAll('.setup-cell').forEach(cell => {
-            if (cell.style.background === 'rgb(144, 238, 144)' || cell.style.background === 'rgb(255, 107, 107)') {
-                cell.style.background = '';
-                cell.style.opacity = '';
+    placeBotShips: () => {
+        const board = gameState.player2Board;
+        const ships = gameState.player2Ships;
+        
+        ships.forEach(ship => {
+            let placed = false;
+            let attempts = 0;
+            
+            while (!placed && attempts < 100) {
+                const row = Math.floor(Math.random() * 10);
+                const col = Math.floor(Math.random() * 10);
+                const orientation = Math.random() < 0.5 ? 'horizontal' : 'vertical';
+                
+                if (Battleship.canPlaceShip(ship, row, col, orientation, board)) {
+                    Battleship.placeShip(ship, row, col, orientation, board);
+                    placed = true;
+                }
+                attempts++;
             }
         });
     },
     
-    placeShipAt: (index) => {
-        const currentShip = gameState.player1Ships[gameState.currentShipIndex];
-        const currentBoard = gameState.player1Board;
+    canPlaceShip: (ship, row, col, orientation, board = gameState.player1Board) => {
+        const size = ship.size;
         
-        if (Battleship.canPlaceShip(currentBoard, index, currentShip.size, gameState.shipOrientation === 'horizontal')) {
-            Battleship.placeShipOnBoard(currentBoard, index, currentShip.size, gameState.shipOrientation === 'horizontal', currentShip);
-            currentShip.placed = true;
-            
-            // Move to next ship
-            gameState.currentShipIndex++;
-            
-            if (gameState.currentShipIndex >= gameState.player1Ships.length) {
-                // All ships placed
-                Battleship.startGame();
-            } else {
-                // Show next ship placement
-                Battleship.showSetupScreen();
-            }
-        } else {
-            Utils.showNotification('Cannot place ship there!', 'warning');
-        }
-    },
-    
-    canPlaceShip: (board, startPos, size, horizontal) => {
-        const row = Math.floor(startPos / 10);
-        const col = startPos % 10;
-        
-        if (horizontal) {
+        if (orientation === 'horizontal') {
             if (col + size > 10) return false;
             for (let i = 0; i < size; i++) {
-                if (board[startPos + i] !== '') return false;
+                if (board[row * 10 + col + i] !== '') return false;
             }
         } else {
             if (row + size > 10) return false;
             for (let i = 0; i < size; i++) {
-                if (board[startPos + i * 10] !== '') return false;
+                if (board[(row + i) * 10 + col] !== '') return false;
             }
         }
         return true;
     },
     
-    placeShipOnBoard: (board, startPos, size, horizontal, ship) => {
+    placeShip: (ship, row, col, orientation, board = gameState.player1Board) => {
+        const size = ship.size;
         ship.positions = [];
+        
         for (let i = 0; i < size; i++) {
-            const pos = horizontal ? startPos + i : startPos + i * 10;
-            board[pos] = 'ship';
-            ship.positions.push(pos);
-        }
-    },
-    
-    startGame: () => {
-        gameState.gamePhase = 'playing';
-        gameState.currentPlayer = 'player1';
-        
-        // Auto-place Player 2's ships randomly
-        Battleship.placeShips(gameState.player2Board, gameState.player2Ships);
-        gameState.player2Ships.forEach(ship => ship.placed = true);
-        
-        Battleship.showGameBoard();
-    },
-    
-    placeShips: (board, ships) => {
-        board.fill('');
-        
-        ships.forEach(ship => {
-            let placed = false;
-            while (!placed) {
-                const startPos = Math.floor(Math.random() * 100);
-                const horizontal = Math.random() < 0.5;
-                
-                if (Battleship.canPlaceShip(board, startPos, ship.size, horizontal)) {
-                    Battleship.placeShipOnBoard(board, startPos, ship.size, horizontal, ship);
-                    placed = true;
-                }
+            let index;
+            if (orientation === 'horizontal') {
+                index = row * 10 + col + i;
+            } else {
+                index = (row + i) * 10 + col;
             }
-        });
+            
+            board[index] = ship.name;
+            ship.positions.push(index);
+        }
+        
+        ship.placed = true;
     },
     
     showGameBoard: () => {
         const gameContainer = document.getElementById('gameContainer');
-        const player1Name = gameState.isMultiplayer ? 'Player 1' : 'You';
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        const currentPlayerName = gameState.currentPlayer === 'player1' ? player1Name : player2Name;
-        const opponentName = gameState.currentPlayer === 'player1' ? player2Name : player1Name;
+        const gameStatus = document.getElementById('gameStatus');
         
         gameContainer.innerHTML = `
             <div class="battleship-game">
-                <div class="game-header">
-                    <h3>🎯 ${currentPlayerName}'s Turn</h3>
-                    <p>Attack ${opponentName}'s fleet!</p>
-                </div>
-                
                 <div class="game-boards">
                     <div class="board-section">
-                        <h4>Your Fleet (${player1Name})</h4>
-                        <div class="board-grid your-fleet">
+                        <h4>Your Board</h4>
+                        <div class="board-grid player-board">
                             ${Array(100).fill().map((_, i) => 
-                                `<div class="cell fleet-cell" data-index="${i}" data-board="fleet"></div>`
+                                `<div class="cell ${gameState.player1Board[i] ? 'ship' : ''}" data-index="${i}"></div>`
                             ).join('')}
                         </div>
                     </div>
                     
                     <div class="board-section">
-                        <h4>Attack Grid (${player2Name})</h4>
-                        <div class="board-grid attack-grid">
+                        <h4>Attack Board</h4>
+                        <div class="board-grid attack-board">
                             ${Array(100).fill().map((_, i) => 
-                                `<div class="cell attack-cell" data-index="${i}" data-board="attack"></div>`
+                                `<div class="cell attack-cell" data-index="${i}" onclick="Battleship.attack(${i})"></div>`
                             ).join('')}
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-        
-        Battleship.attachGameEvents();
-        Battleship.updateGameDisplay();
-        Battleship.updateScoreDisplay();
-    },
-    
-    attachGameEvents: () => {
-        document.querySelectorAll('.attack-cell').forEach((cell, index) => {
-            cell.addEventListener('click', () => Battleship.attackPosition(index));
-        });
-    },
-    
-    updateGameDisplay: () => {
-        // Always show Player 1's fleet (your ships + hits/misses on your ships)
-        document.querySelectorAll('.fleet-cell').forEach((cell, index) => {
-            if (gameState.player1Board[index] === 'ship') {
-                cell.style.background = '#007bff';
-                cell.textContent = '🚢';
-                cell.style.color = 'white';
-            } else if (gameState.player1Board[index] === 'hit') {
-                cell.style.background = '#dc3545';
-                cell.textContent = '💥';
-            } else if (gameState.player1Board[index] === 'miss') {
-                cell.style.background = '#6c757d';
-                cell.textContent = '💧';
-            } else {
-                cell.style.background = '';
-                cell.textContent = '';
-                cell.style.color = '';
-            }
-        });
-        
-        // Show attack grid (ONLY hits and misses on Player 2's ships - ships completely hidden)
-        document.querySelectorAll('.attack-cell').forEach((cell, index) => {
-            if (gameState.player2Board[index] === 'hit') {
-                cell.style.background = '#dc3545';
-                cell.textContent = '💥';
-            } else if (gameState.player2Board[index] === 'miss') {
-                cell.style.background = '#6c757d';
-                cell.textContent = '💧';
-            } else {
-                // Empty cell - no ship visible
-                cell.style.background = '';
-                cell.textContent = '';
-            }
-        });
-    },
-    
-    attackPosition: (index) => {
-        const opponentBoard = gameState.currentPlayer === 'player1' ? gameState.player2Board : gameState.player1Board;
-        const opponentShips = gameState.currentPlayer === 'player1' ? gameState.player2Ships : gameState.player1Ships;
-        const player1Name = gameState.isMultiplayer ? 'Player 1' : 'You';
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        const currentPlayerName = gameState.currentPlayer === 'player1' ? player1Name : player2Name;
-        
-        // Check if already attacked
-        if (opponentBoard[index] === 'hit' || opponentBoard[index] === 'miss') {
-            Utils.showNotification('Already attacked this position!', 'warning');
-            return;
-        }
-        
-        const cell = document.querySelector(`[data-index="${index}"][data-board="attack"]`);
-        
-        if (opponentBoard[index] === 'ship') {
-            // Hit!
-            opponentBoard[index] = 'hit';
-            cell.style.background = '#dc3545';
-            cell.textContent = '💥';
-            cell.style.animation = 'explosion 0.5s ease-in-out';
-            
-            // Check if ship is sunk
-            const sunkShip = opponentShips.find(ship => 
-                ship.positions.includes(index) && 
-                ship.positions.every(pos => opponentBoard[pos] === 'hit')
-            );
-            
-            if (sunkShip) {
-                sunkShip.sunk = true;
-                Utils.showNotification(`🎯 ${sunkShip.name} sunk by ${currentPlayerName}!`, 'success');
-            } else {
-                Utils.showNotification(`🎯 Hit by ${currentPlayerName}!`, 'success');
-            }
-            
-            // Check win condition
-            if (opponentShips.every(ship => ship.sunk)) {
-                Battleship.endGame(gameState.currentPlayer);
-                return;
-            }
-            
-            // If hit, same player gets another turn
-            Battleship.updateScoreDisplay();
-            return;
-        } else {
-            // Miss
-            opponentBoard[index] = 'miss';
-            cell.style.background = '#6c757d';
-            cell.textContent = '💧';
-            cell.style.animation = 'splash 0.5s ease-in-out';
-            Utils.showNotification(`💧 Miss by ${currentPlayerName}!`, 'info');
-        }
-        
-        // Only switch turns on a miss
-        gameState.currentPlayer = gameState.currentPlayer === 'player1' ? 'player2' : 'player1';
-        
-        // Update display and handle bot turn
-        setTimeout(() => {
-            Battleship.updateGameDisplay();
-            Battleship.updateScoreDisplay();
-            
-            // If it's now the bot's turn (and not multiplayer), make bot move
-            if (!gameState.isMultiplayer && gameState.currentPlayer === 'player2') {
-                setTimeout(() => {
-                    Battleship.botMove();
-                }, 1000);
-            }
-        }, 1500);
-    },
-    
-    botMove: () => {
-        if (!gameState.gameActive || gameState.currentPlayer !== 'player2') return;
-        
-        // Find an empty cell to attack
-        const player1Board = gameState.player1Board;
-        const emptyCells = [];
-        
-        for (let i = 0; i < 100; i++) {
-            if (player1Board[i] !== 'hit' && player1Board[i] !== 'miss') {
-                emptyCells.push(i);
-            }
-        }
-        
-        if (emptyCells.length > 0) {
-            const attackIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-            Battleship.botAttackPosition(attackIndex);
-        }
-    },
-    
-    botAttackPosition: (index) => {
-        const player1Board = gameState.player1Board;
-        const player1Ships = gameState.player1Ships;
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        
-        const cell = document.querySelector(`[data-index="${index}"][data-board="fleet"]`);
-        
-        if (player1Board[index] === 'ship') {
-            // Bot hit!
-            player1Board[index] = 'hit';
-            cell.style.background = '#dc3545';
-            cell.textContent = '💥';
-            cell.style.animation = 'explosion 0.5s ease-in-out';
-            
-            // Check if ship is sunk
-            const sunkShip = player1Ships.find(ship => 
-                ship.positions.includes(index) && 
-                ship.positions.every(pos => player1Board[pos] === 'hit')
-            );
-            
-            if (sunkShip) {
-                sunkShip.sunk = true;
-                Utils.showNotification(`🎯 ${sunkShip.name} sunk by ${player2Name}!`, 'error');
-            } else {
-                Utils.showNotification(`🎯 Hit by ${player2Name}!`, 'error');
-            }
-            
-            // Check win condition
-            if (player1Ships.every(ship => ship.sunk)) {
-                Battleship.endGame('player2');
-                return;
-            }
-            
-            // If hit, bot gets another turn
-            Battleship.updateScoreDisplay();
-            setTimeout(() => {
-                Battleship.botMove();
-            }, 1000);
-            return;
-        } else {
-            // Bot miss
-            player1Board[index] = 'miss';
-            cell.style.background = '#6c757d';
-            cell.textContent = '💧';
-            cell.style.animation = 'splash 0.5s ease-in-out';
-            Utils.showNotification(`💧 Miss by ${player2Name}!`, 'info');
-        }
-        
-        // Switch back to player 1
-        gameState.currentPlayer = 'player1';
-        
-        // Update display
-        setTimeout(() => {
-            Battleship.updateGameDisplay();
-            Battleship.updateScoreDisplay();
-        }, 1500);
-    },
-    
-    endGame: (winner) => {
-        const player1Name = gameState.isMultiplayer ? 'Player 1' : 'You';
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        const winnerName = winner === 'player1' ? player1Name : player2Name;
-        const loserName = winner === 'player1' ? player2Name : player1Name;
-        
-        // Update scores
-        if (winner === 'player1') {
-            gameState.player1Score++;
-        } else {
-            gameState.player2Score++;
-        }
-        gameState.gameCount++;
-        
-        const gameContainer = document.getElementById('gameContainer');
-        gameContainer.innerHTML = `
-            <div class="game-over-screen">
-                <div class="final-result">
-                    <h2>🎉 ${winnerName} Wins! 🎉</h2>
-                    <p>${winnerName} destroyed ${loserName}'s entire fleet!</p>
-                </div>
                 
-                <div class="score-summary">
-                    <div class="score-item">
-                        <span class="player-label">${player1Name}:</span>
-                        <span class="score ${winner === 'player1' ? 'winner' : ''}">${gameState.player1Score}</span>
+                <div class="game-info">
+                    <div class="current-turn">
+                        <h4>Current Turn: ${gameState.currentPlayer === 'player1' ? 'You' : 'Bot'}</h4>
                     </div>
-                    <div class="score-item">
-                        <span class="player-label">${player2Name}:</span>
-                        <span class="score ${winner === 'player2' ? 'winner' : ''}">${gameState.player2Score}</span>
-                    </div>
-                </div>
-                
-                <div class="game-actions">
-                    <button onclick="Battleship.init()" class="btn btn-primary">🔄 Play Again</button>
-                    <button onclick="GameManager.backToGames()" class="btn btn-secondary">🏠 Back to Games</button>
                 </div>
             </div>
         `;
         
-        Battleship.updateScoreDisplay();
-    },
-    
-    updateScoreDisplay: () => {
-        const gameStatus = document.getElementById('gameStatus');
-        const player1Name = gameState.isMultiplayer ? 'Player 1' : 'You';
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        const currentPlayerName = gameState.currentPlayer === 'player1' ? player1Name : player2Name;
-        const player1ShipsRemaining = gameState.player1Ships.filter(ship => !ship.sunk).length;
-        const player2ShipsRemaining = gameState.player2Ships.filter(ship => !ship.sunk).length;
-        
-        if (gameState.gamePhase === 'setup') {
-            gameStatus.innerHTML = `
-                <div class="score-display">
-                    <div class="score-item">
-                        <span class="player-label">Setup Phase:</span>
-                        <span class="score">${player1Name} placing ships</span>
-                    </div>
+        gameStatus.innerHTML = `
+            <div class="score-display">
+                <div class="score-item">
+                    <span class="player-label">Your Hits:</span>
+                    <span class="score">${gameState.player1Score}</span>
                 </div>
-            `;
-        } else {
-            gameStatus.innerHTML = `
-                <div class="score-display">
-                    <div class="score-item">
-                        <span class="player-label">${player1Name} Ships:</span>
-                        <span class="score">${player1ShipsRemaining}</span>
-                    </div>
-                    <div class="score-item">
-                        <span class="player-label">${player2Name} Ships:</span>
-                        <span class="score">${player2ShipsRemaining}</span>
-                    </div>
-                    <div class="score-item">
-                        <span class="player-label">Current Turn:</span>
-                        <span class="score">${currentPlayerName}</span>
-                    </div>
-                </div>
-                <div class="current-player">🎯 ${currentPlayerName}'s Turn - Click on the attack grid to fire!</div>
-            `;
-        }
-    }
-};
-
-// Simple War placeholder
-// Connect 4 Game
-const Connect4 = {
-    init: () => {
-        gameState = {
-            board: Array(42).fill(''),
-            currentPlayer: 'player1',
-            gamePhase: 'playing',
-            player1Score: 0,
-            player2Score: 0,
-            gameCount: 0,
-            isMultiplayer: false
-        };
-        
-        Connect4.showGameModeSelection();
-    },
-    
-    showGameModeSelection: () => {
-        const gameContainer = document.getElementById('gameContainer');
-        gameContainer.innerHTML = `
-            <div class="game-mode-selection">
-                <h2>Connect 4</h2>
-                <p>Choose your game mode:</p>
-                <div class="mode-buttons">
-                    <button onclick="Connect4.startMultiplayer()" class="btn btn-primary">PvP (Wait for Player)</button>
-                    <button onclick="Connect4.startBotGame()" class="btn btn-secondary">Play vs Bot</button>
-                </div>
-                <button onclick="GameManager.backToGames()" class="btn btn-outline">Back to Games</button>
-            </div>
-        `;
-    },
-    
-    startMultiplayer: () => {
-        const roomCode = Math.random().toString(36).substr(2, 6).toUpperCase();
-        const gameContainer = document.getElementById('gameContainer');
-        gameContainer.innerHTML = `
-            <div class="waiting-room">
-                <h3>Waiting for Player...</h3>
-                <div class="room-code">Room Code: ${roomCode}</div>
-                <div class="waiting-text">Share this code with a friend!</div>
-                <div class="countdown">Auto-starting with bot in: <span id="countdown">30</span>s</div>
-                <button onclick="GameManager.backToGames()" class="btn btn-secondary">Cancel</button>
-            </div>
-        `;
-        
-        let timeLeft = 30;
-        const countdown = setInterval(() => {
-            timeLeft--;
-            document.getElementById('countdown').textContent = timeLeft;
-            if (timeLeft <= 0) {
-                clearInterval(countdown);
-                Connect4.startBotGame();
-            }
-        }, 1000);
-        
-        // Simulate player joining after 15 seconds
-        setTimeout(() => {
-            if (timeLeft > 0) {
-                clearInterval(countdown);
-                Connect4.playerJoined();
-            }
-        }, 15000);
-    },
-    
-    playerJoined: () => {
-        gameState.isMultiplayer = true;
-        Connect4.loadGame();
-    },
-    
-    startBotGame: () => {
-        gameState.isMultiplayer = false;
-        Connect4.loadGame();
-    },
-    
-    loadGame: () => {
-        const gameContainer = document.getElementById('gameContainer');
-        gameContainer.innerHTML = `
-            <div class="connect4-game">
-                <div class="game-header">
-                    <h3>Connect 4</h3>
-                    <div id="gameStatus" class="game-status"></div>
-                </div>
-                <div class="connect4-board">
-                    <div class="board-grid" id="connect4Board"></div>
-                </div>
-                <div class="game-controls">
-                    <button onclick="Connect4.init()" class="btn btn-primary">New Game</button>
-                    <button onclick="GameManager.backToGames()" class="btn btn-secondary">Back to Games</button>
+                <div class="score-item">
+                    <span class="player-label">Bot Hits:</span>
+                    <span class="score">${gameState.player2Score}</span>
                 </div>
             </div>
         `;
-        
-        Connect4.createBoard();
-        Connect4.updateScoreDisplay();
     },
     
-    createBoard: () => {
-        const board = document.getElementById('connect4Board');
-        board.innerHTML = '';
-        
-        for (let row = 0; row < 6; row++) {
-            for (let col = 0; col < 7; col++) {
-                const cell = document.createElement('div');
-                cell.className = 'connect4-cell';
-                cell.dataset.index = row * 7 + col;
-                cell.addEventListener('click', () => Connect4.handleCellClick(row * 7 + col));
-                board.appendChild(cell);
-            }
-        }
-    },
-    
-    handleCellClick: (index) => {
+    attack: (index) => {
         if (gameState.gamePhase !== 'playing' || gameState.currentPlayer !== 'player1') return;
         
-        const col = index % 7;
-        const row = Connect4.getLowestEmptyRow(col);
-        if (row === -1) return; // Column is full
+        const board = gameState.player2Board;
+        const cell = document.querySelector(`.attack-cell[data-index="${index}"]`);
         
-        const cellIndex = row * 7 + col;
-        gameState.board[cellIndex] = 'player1';
+        if (board[index] === 'hit' || board[index] === 'miss') return;
         
-        Connect4.updateDisplay();
-        
-        if (Connect4.checkWinner()) {
-            Connect4.endGame('player1');
-            return;
-        }
-        
-        if (Connect4.checkDraw()) {
-            Connect4.endGame('draw');
-            return;
+        if (board[index] !== '') {
+            // Hit
+            board[index] = 'hit';
+            cell.classList.add('hit');
+            gameState.player1Score++;
+            
+            // Check if ship is sunk
+            const shipName = board[index];
+            const ship = gameState.player2Ships.find(s => s.name === shipName);
+            if (ship && !ship.sunk) {
+                const allHit = ship.positions.every(pos => board[pos] === 'hit');
+                if (allHit) {
+                    ship.sunk = true;
+                    Utils.showNotification(`${shipName} sunk!`, 'success');
+                }
+            }
+            
+            // Check win condition
+            if (gameState.player1Score >= 17) { // Total ship cells
+                Battleship.endGame('player1');
+                return;
+            }
+        } else {
+            // Miss
+            board[index] = 'miss';
+            cell.classList.add('miss');
         }
         
         gameState.currentPlayer = 'player2';
-        Connect4.updateScoreDisplay();
+        Battleship.updateScoreDisplay();
         
-        if (!gameState.isMultiplayer) {
-            setTimeout(() => Connect4.botMove(), 1000);
-        }
+        // Bot attack
+        setTimeout(() => Battleship.botAttack(), 1000);
     },
     
-    getLowestEmptyRow: (col) => {
-        for (let row = 5; row >= 0; row--) {
-            if (gameState.board[row * 7 + col] === '') {
-                return row;
-            }
-        }
-        return -1;
-    },
-    
-    botMove: () => {
+    botAttack: () => {
         if (gameState.gamePhase !== 'playing' || gameState.currentPlayer !== 'player2') return;
         
-        // Simple bot logic - try to win, then block, then random
-        let move = Connect4.getBestMove();
-        if (move === -1) {
-            // Random move
-            const availableCols = [];
-            for (let col = 0; col < 7; col++) {
-                if (Connect4.getLowestEmptyRow(col) !== -1) {
-                    availableCols.push(col);
-                }
+        const board = gameState.player1Board;
+        const availableCells = [];
+        
+        for (let i = 0; i < 100; i++) {
+            if (board[i] !== 'hit' && board[i] !== 'miss') {
+                availableCells.push(i);
             }
-            move = availableCols[Math.floor(Math.random() * availableCols.length)];
         }
         
-        const row = Connect4.getLowestEmptyRow(move);
-        const cellIndex = row * 7 + move;
-        gameState.board[cellIndex] = 'player2';
-        
-        Connect4.updateDisplay();
-        
-        if (Connect4.checkWinner()) {
-            Connect4.endGame('player2');
+        if (availableCells.length === 0) {
+            Battleship.endGame('player1');
             return;
         }
         
-        if (Connect4.checkDraw()) {
-            Connect4.endGame('draw');
-            return;
+        const attackIndex = availableCells[Math.floor(Math.random() * availableCells.length)];
+        
+        if (board[attackIndex] !== '') {
+            // Hit
+            board[attackIndex] = 'hit';
+            gameState.player2Score++;
+            Utils.showNotification('Bot hit your ship!', 'error');
+            
+            // Check win condition
+            if (gameState.player2Score >= 17) {
+                Battleship.endGame('player2');
+                return;
+            }
+        } else {
+            // Miss
+            board[attackIndex] = 'miss';
+            Utils.showNotification('Bot missed!', 'info');
         }
         
         gameState.currentPlayer = 'player1';
-        Connect4.updateScoreDisplay();
+        Battleship.updateScoreDisplay();
     },
     
-    getBestMove: () => {
-        // Check for winning move
-        for (let col = 0; col < 7; col++) {
-            const row = Connect4.getLowestEmptyRow(col);
-            if (row !== -1) {
-                const cellIndex = row * 7 + col;
-                gameState.board[cellIndex] = 'player2';
-                if (Connect4.checkWinner()) {
-                    gameState.board[cellIndex] = '';
-                    return col;
-                }
-                gameState.board[cellIndex] = '';
-            }
-        }
+    updateScoreDisplay: () => {
+        const gameStatus = document.getElementById('gameStatus');
         
-        // Check for blocking move
-        for (let col = 0; col < 7; col++) {
-            const row = Connect4.getLowestEmptyRow(col);
-            if (row !== -1) {
-                const cellIndex = row * 7 + col;
-                gameState.board[cellIndex] = 'player1';
-                if (Connect4.checkWinner()) {
-                    gameState.board[cellIndex] = '';
-                    return col;
-                }
-                gameState.board[cellIndex] = '';
-            }
-        }
-        
-        return -1;
+        gameStatus.innerHTML = `
+            <div class="score-display">
+                <div class="score-item">
+                    <span class="player-label">Your Hits:</span>
+                    <span class="score">${gameState.player1Score}</span>
+                </div>
+                <div class="score-item">
+                    <span class="player-label">Bot Hits:</span>
+                    <span class="score">${gameState.player2Score}</span>
+                </div>
+            </div>
+            <div class="current-player">Current Turn: ${gameState.currentPlayer === 'player1' ? 'You' : 'Bot'}</div>
+        `;
     },
     
-    updateDisplay: () => {
-        document.querySelectorAll('.connect4-cell').forEach((cell, index) => {
-            if (gameState.board[index] === 'player1') {
-                cell.style.background = '#007bff';
-                cell.textContent = '🔴';
-            } else if (gameState.board[index] === 'player2') {
-                cell.style.background = '#ffc107';
-                cell.textContent = '🟡';
-            } else {
-                cell.style.background = '';
-                cell.textContent = '';
+    updateSetupDisplay: () => {
+        const cells = document.querySelectorAll('.setup-cell');
+        cells.forEach((cell, index) => {
+            const shipName = gameState.player1Board[index];
+            cell.className = 'cell setup-cell';
+            if (shipName) {
+                cell.classList.add('ship');
+                cell.textContent = shipName[0];
             }
         });
     },
     
-    checkWinner: () => {
-        const directions = [
-            { dr: 0, dc: 1 }, // Horizontal
-            { dr: 1, dc: 0 }, // Vertical
-            { dr: 1, dc: 1 }, // Diagonal \
-            { dr: 1, dc: -1 } // Diagonal /
-        ];
-        
-        for (let row = 0; row < 6; row++) {
-            for (let col = 0; col < 7; col++) {
-                const cellIndex = row * 7 + col;
-                const player = gameState.board[cellIndex];
-                if (player === '') continue;
-                
-                for (const dir of directions) {
-                    let count = 1;
-                    for (let i = 1; i < 4; i++) {
-                        const newRow = row + dir.dr * i;
-                        const newCol = col + dir.dc * i;
-                        if (newRow < 0 || newRow >= 6 || newCol < 0 || newCol >= 7) break;
-                        const newIndex = newRow * 7 + newCol;
-                        if (gameState.board[newIndex] === player) {
-                            count++;
-                        } else {
-                            break;
-                        }
-                    }
-                    if (count >= 4) return true;
-                }
-            }
-        }
-        return false;
-    },
-    
-    checkDraw: () => {
-        return gameState.board.every(cell => cell !== '');
-    },
-    
-    endGame: (winner) => {
+    endGame: (result) => {
         gameState.gamePhase = 'ended';
-        
-        const player1Name = gameState.isMultiplayer ? 'Player 1' : 'You';
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        
-        if (winner === 'player1') {
-            gameState.player1Score++;
-        } else if (winner === 'player2') {
-            gameState.player2Score++;
-        }
         gameState.gameCount++;
         
         const gameContainer = document.getElementById('gameContainer');
+        const message = result === 'player1' ? '🎉 You Won! 🎉' : '😔 Bot Won!';
+        
         gameContainer.innerHTML = `
             <div class="game-over-screen">
-                <div class="final-result">
-                    <h2>${winner === 'player1' ? '🎉 ' + player1Name + ' Wins! 🎉' : 
-                          winner === 'player2' ? '🎉 ' + player2Name + ' Wins! 🎉' : 
-                          '🤝 It\'s a Draw!'}</h2>
-                </div>
+                <h2>${message}</h2>
                 <div class="score-summary">
-                    <div class="score-item">
-                        <span class="player-label">${player1Name}:</span>
-                        <span class="score ${winner === 'player1' ? 'winner' : ''}">${gameState.player1Score}</span>
-                    </div>
-                    <div class="score-item">
-                        <span class="player-label">${player2Name}:</span>
-                        <span class="score ${winner === 'player2' ? 'winner' : ''}">${gameState.player2Score}</span>
-                    </div>
+                    <div>Final Score - You: ${gameState.player1Score}, Bot: ${gameState.player2Score}</div>
+                    <div>Games Played: ${gameState.gameCount}</div>
                 </div>
                 <div class="game-actions">
-                    <button onclick="Connect4.init()" class="btn btn-primary">🔄 Play Again</button>
-                    <button onclick="GameManager.backToGames()" class="btn btn-secondary">🏠 Back to Games</button>
-                </div>
-            </div>
-        `;
-    },
-    
-    updateScoreDisplay: () => {
-        const gameStatus = document.getElementById('gameStatus');
-        const player1Name = gameState.isMultiplayer ? 'Player 1' : 'You';
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        const currentPlayerName = gameState.currentPlayer === 'player1' ? player1Name : player2Name;
-        
-        gameStatus.innerHTML = `
-            <div class="score-display">
-                <div class="score-item">
-                    <span class="player-label">${player1Name}:</span>
-                    <span class="score">${gameState.player1Score}</span>
-                </div>
-                <div class="score-item">
-                    <span class="player-label">${player2Name}:</span>
-                    <span class="score">${gameState.player2Score}</span>
-                </div>
-                <div class="current-player">Current Turn: ${currentPlayerName}</div>
-            </div>
-        `;
-    }
-};
-
-// War Card Game
-const War = {
-    init: () => {
-        gameState = {
-            player1Cards: [],
-            player2Cards: [],
-            currentPlayer: 'player1',
-            gamePhase: 'playing',
-            player1Score: 0,
-            player2Score: 0,
-            gameCount: 0,
-            isMultiplayer: false,
-            warCards: [],
-            gameDeck: []
-        };
-        
-        War.showGameModeSelection();
-    },
-    
-    showGameModeSelection: () => {
-        const gameContainer = document.getElementById('gameContainer');
-        gameContainer.innerHTML = `
-            <div class="game-mode-selection">
-                <h2>War Card Game</h2>
-                <p>Choose your game mode:</p>
-                <div class="mode-buttons">
-                    <button onclick="War.startMultiplayer()" class="btn btn-primary">PvP (Wait for Player)</button>
-                    <button onclick="War.startBotGame()" class="btn btn-secondary">Play vs Bot</button>
-                </div>
-                <button onclick="GameManager.backToGames()" class="btn btn-outline">Back to Games</button>
-            </div>
-        `;
-    },
-    
-    startMultiplayer: () => {
-        const roomCode = Math.random().toString(36).substr(2, 6).toUpperCase();
-        const gameContainer = document.getElementById('gameContainer');
-        gameContainer.innerHTML = `
-            <div class="waiting-room">
-                <h3>Waiting for Player...</h3>
-                <div class="room-code">Room Code: ${roomCode}</div>
-                <div class="waiting-text">Share this code with a friend!</div>
-                <div class="countdown">Auto-starting with bot in: <span id="countdown">30</span>s</div>
-                <button onclick="GameManager.backToGames()" class="btn btn-secondary">Cancel</button>
-            </div>
-        `;
-        
-        let timeLeft = 30;
-        const countdown = setInterval(() => {
-            timeLeft--;
-            document.getElementById('countdown').textContent = timeLeft;
-            if (timeLeft <= 0) {
-                clearInterval(countdown);
-                War.startBotGame();
-            }
-        }, 1000);
-        
-        // Simulate player joining after 15 seconds
-        setTimeout(() => {
-            if (timeLeft > 0) {
-                clearInterval(countdown);
-                War.playerJoined();
-            }
-        }, 15000);
-    },
-    
-    playerJoined: () => {
-        gameState.isMultiplayer = true;
-        War.loadGame();
-    },
-    
-    startBotGame: () => {
-        gameState.isMultiplayer = false;
-        War.loadGame();
-    },
-    
-    loadGame: () => {
-        War.createDeck();
-        War.dealCards();
-        
-        const gameContainer = document.getElementById('gameContainer');
-        gameContainer.innerHTML = `
-            <div class="war-game">
-                <div class="game-header">
-                    <h3>War Card Game</h3>
-                    <div id="gameStatus" class="game-status"></div>
-                </div>
-                <div class="war-game-area">
-                    <div class="player-cards">
-                        <div class="card-label">${gameState.isMultiplayer ? 'Player 1' : 'Your'} Cards</div>
-                        <div class="card-count" id="player1CardCount">${gameState.player1Cards.length}</div>
-                    </div>
-                    <div class="battle-area">
-                        <div class="battle-display" id="battleDisplay">
-                            <div class="ready-display">
-                                <div class="ready-text">Ready to Battle!</div>
-                                <div class="ready-emoji">⚔️</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="opponent-cards">
-                        <div class="card-label">${gameState.isMultiplayer ? 'Player 2' : 'Bot'} Cards</div>
-                        <div class="card-count" id="player2CardCount">${gameState.player2Cards.length}</div>
-                    </div>
-                </div>
-                <div class="game-controls">
-                    <button onclick="War.playCard()" class="btn btn-primary">Play Card</button>
-                    <button onclick="War.init()" class="btn btn-secondary">New Game</button>
-                    <button onclick="GameManager.backToGames()" class="btn btn-outline">Back to Games</button>
-                </div>
-            </div>
-        `;
-        
-        War.updateScoreDisplay();
-    },
-    
-    createDeck: () => {
-        const suits = ['♠', '♥', '♦', '♣'];
-        const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-        gameState.gameDeck = [];
-        
-        for (const suit of suits) {
-            for (const rank of ranks) {
-                gameState.gameDeck.push({ suit, rank, value: War.getCardValue(rank) });
-            }
-        }
-        
-        // Shuffle deck
-        for (let i = gameState.gameDeck.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [gameState.gameDeck[i], gameState.gameDeck[j]] = [gameState.gameDeck[j], gameState.gameDeck[i]];
-        }
-    },
-    
-    getCardValue: (rank) => {
-        if (rank === 'A') return 14;
-        if (rank === 'K') return 13;
-        if (rank === 'Q') return 12;
-        if (rank === 'J') return 11;
-        return parseInt(rank);
-    },
-    
-    dealCards: () => {
-        gameState.player1Cards = [];
-        gameState.player2Cards = [];
-        
-        for (let i = 0; i < gameState.gameDeck.length; i++) {
-            if (i % 2 === 0) {
-                gameState.player1Cards.push(gameState.gameDeck[i]);
-            } else {
-                gameState.player2Cards.push(gameState.gameDeck[i]);
-            }
-        }
-    },
-    
-    playCard: () => {
-        if (gameState.player1Cards.length === 0 || gameState.player2Cards.length === 0) {
-            War.endGame();
-            return;
-        }
-        
-        const player1Card = gameState.player1Cards.shift();
-        const player2Card = gameState.player2Cards.shift();
-        
-        const battleDisplay = document.getElementById('battleDisplay');
-        battleDisplay.innerHTML = `
-            <div class="battle-cards">
-                <div class="battle-card player-card">
-                    <div class="card-rank">${player1Card.rank}</div>
-                    <div class="card-suit">${player1Card.suit}</div>
-                </div>
-                <div class="vs">VS</div>
-                <div class="battle-card opponent-card">
-                    <div class="card-rank">${player2Card.rank}</div>
-                    <div class="card-suit">${player2Card.suit}</div>
-                </div>
-            </div>
-        `;
-        
-        setTimeout(() => {
-            if (player1Card.value > player2Card.value) {
-                // Player 1 wins
-                gameState.player1Cards.push(player1Card, player2Card);
-                battleDisplay.innerHTML += `
-                    <div class="war-display">
-                        <div class="war-title">${gameState.isMultiplayer ? 'Player 1' : 'You'} Win!</div>
-                        <div class="war-info">You captured both cards!</div>
-                    </div>
-                `;
-            } else if (player2Card.value > player1Card.value) {
-                // Player 2 wins
-                gameState.player2Cards.push(player1Card, player2Card);
-                battleDisplay.innerHTML += `
-                    <div class="war-display">
-                        <div class="war-title">${gameState.isMultiplayer ? 'Player 2' : 'Bot'} Wins!</div>
-                        <div class="war-info">They captured both cards!</div>
-                    </div>
-                `;
-            } else {
-                // War!
-                War.handleWar([player1Card, player2Card]);
-                return;
-            }
-            
-            War.updateCardCounts();
-            
-            setTimeout(() => {
-                if (gameState.player1Cards.length === 0 || gameState.player2Cards.length === 0) {
-                    War.endGame();
-                } else {
-                    War.resetBattleDisplay();
-                }
-            }, 2000);
-        }, 1000);
-    },
-    
-    handleWar: (warCards) => {
-        if (gameState.player1Cards.length < 3 || gameState.player2Cards.length < 3) {
-            // Not enough cards for war
-            const battleDisplay = document.getElementById('battleDisplay');
-            battleDisplay.innerHTML += `
-                <div class="war-display">
-                    <div class="war-title">War!</div>
-                    <div class="war-info">Not enough cards for war. Game continues...</div>
-                </div>
-            `;
-            return;
-        }
-        
-        const player1WarCards = gameState.player1Cards.splice(0, 3);
-        const player2WarCards = gameState.player2Cards.splice(0, 3);
-        
-        const battleDisplay = document.getElementById('battleDisplay');
-        battleDisplay.innerHTML += `
-            <div class="war-display">
-                <div class="war-title">WAR!</div>
-                <div class="war-cards">
-                    <div class="war-card">${player1WarCards[2].rank}${player1WarCards[2].suit}</div>
-                    <div class="vs">VS</div>
-                    <div class="war-card">${player2WarCards[2].rank}${player2WarCards[2].suit}</div>
-                </div>
-            </div>
-        `;
-        
-        setTimeout(() => {
-            const player1WarCard = player1WarCards[2];
-            const player2WarCard = player2WarCards[2];
-            
-            if (player1WarCard.value > player2WarCard.value) {
-                // Player 1 wins war
-                gameState.player1Cards.push(...warCards, ...player1WarCards, ...player2WarCards);
-                battleDisplay.innerHTML += `
-                    <div class="war-info">${gameState.isMultiplayer ? 'Player 1' : 'You'} wins the war!</div>
-                `;
-            } else if (player2WarCard.value > player1WarCard.value) {
-                // Player 2 wins war
-                gameState.player2Cards.push(...warCards, ...player1WarCards, ...player2WarCards);
-                battleDisplay.innerHTML += `
-                    <div class="war-info">${gameState.isMultiplayer ? 'Player 2' : 'Bot'} wins the war!</div>
-                `;
-            } else {
-                // Another war
-                War.handleWar([...warCards, ...player1WarCards, ...player2WarCards]);
-                return;
-            }
-            
-            War.updateCardCounts();
-            
-            setTimeout(() => {
-                if (gameState.player1Cards.length === 0 || gameState.player2Cards.length === 0) {
-                    War.endGame();
-                } else {
-                    War.resetBattleDisplay();
-                }
-            }, 2000);
-        }, 1000);
-    },
-    
-    updateCardCounts: () => {
-        document.getElementById('player1CardCount').textContent = gameState.player1Cards.length;
-        document.getElementById('player2CardCount').textContent = gameState.player2Cards.length;
-    },
-    
-    resetBattleDisplay: () => {
-        const battleDisplay = document.getElementById('battleDisplay');
-        battleDisplay.innerHTML = `
-            <div class="ready-display">
-                <div class="ready-text">Ready for Next Battle!</div>
-                <div class="ready-emoji">⚔️</div>
-            </div>
-        `;
-    },
-    
-    endGame: () => {
-        const winner = gameState.player1Cards.length > gameState.player2Cards.length ? 'player1' : 'player2';
-        
-        if (winner === 'player1') {
-            gameState.player1Score++;
-        } else {
-            gameState.player2Score++;
-        }
-        gameState.gameCount++;
-        
-        const player1Name = gameState.isMultiplayer ? 'Player 1' : 'You';
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        const winnerName = winner === 'player1' ? player1Name : player2Name;
-        
-        const gameContainer = document.getElementById('gameContainer');
-        gameContainer.innerHTML = `
-            <div class="game-over-screen">
-                <div class="final-result">
-                    <h2>🎉 ${winnerName} Wins! 🎉</h2>
-                    <p>${winnerName} captured all the cards!</p>
-                </div>
-                <div class="score-summary">
-                    <div class="score-item">
-                        <span class="player-label">${player1Name}:</span>
-                        <span class="score ${winner === 'player1' ? 'winner' : ''}">${gameState.player1Score}</span>
-                    </div>
-                    <div class="score-item">
-                        <span class="player-label">${player2Name}:</span>
-                        <span class="score ${winner === 'player2' ? 'winner' : ''}">${gameState.player2Score}</span>
-                    </div>
-                </div>
-                <div class="game-actions">
-                    <button onclick="War.init()" class="btn btn-primary">🔄 Play Again</button>
-                    <button onclick="GameManager.backToGames()" class="btn btn-secondary">🏠 Back to Games</button>
-                </div>
-            </div>
-        `;
-    },
-    
-    updateScoreDisplay: () => {
-        const gameStatus = document.getElementById('gameStatus');
-        const player1Name = gameState.isMultiplayer ? 'Player 1' : 'You';
-        const player2Name = gameState.isMultiplayer ? 'Player 2' : 'Bot';
-        
-        gameStatus.innerHTML = `
-            <div class="score-display">
-                <div class="score-item">
-                    <span class="player-label">${player1Name}:</span>
-                    <span class="score">${gameState.player1Score}</span>
-                </div>
-                <div class="score-item">
-                    <span class="player-label">${player2Name}:</span>
-                    <span class="score">${gameState.player2Score}</span>
+                    <button class="btn btn-primary" onclick="Battleship.init()">Play Again</button>
+                    <button class="btn btn-secondary" onclick="GameManager.backToGames()">Back to Games</button>
                 </div>
             </div>
         `;
@@ -2066,58 +2078,50 @@ const AdminManager = {
             }
         });
         
-        // Admin login form
-        const adminLoginForm = document.getElementById('adminLoginForm');
-        if (adminLoginForm) {
-            adminLoginForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                AdminManager.handleLogin();
-            });
-        }
-
-        // Admin buttons (delegated post-login)
-        document.addEventListener('click', (e) => {
-            const t = e.target;
-            if (!(t instanceof HTMLElement)) return;
-            if (t.id === 'manageAdsBtn') AdminManager.showManageAds();
-            if (t.id === 'headerCodesBtn') AdminManager.showHeaderCodes();
-            if (t.id === 'siteConfigBtn') AdminManager.showSiteConfig();
-            if (t.id === 'userMgmtBtn') AdminManager.showUserMgmt();
-        });
+        // Admin button event listeners
+        const manageAdsBtn = document.getElementById('manageAdsBtn');
+        const headerCodesBtn = document.getElementById('headerCodesBtn');
+        const siteConfigBtn = document.getElementById('siteConfigBtn');
+        const userMgmtBtn = document.getElementById('userMgmtBtn');
+        
+        if (manageAdsBtn) manageAdsBtn.addEventListener('click', AdminManager.showManageAds);
+        if (headerCodesBtn) headerCodesBtn.addEventListener('click', AdminManager.showHeaderCodes);
+        if (siteConfigBtn) siteConfigBtn.addEventListener('click', AdminManager.showSiteConfig);
+        if (userMgmtBtn) userMgmtBtn.addEventListener('click', AdminManager.showUserMgmt);
     },
     
     showLogin: () => {
-        document.getElementById('adminLoginModal').style.display = 'block';
+        const modal = document.getElementById('adminLoginModal');
+        if (modal) modal.style.display = 'block';
+        const form = document.getElementById('adminLoginForm');
+        if (form && !AdminManager._loginBound) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const username = document.getElementById('adminUsername').value;
+                const password = document.getElementById('adminPassword').value;
+                
+                if (username === ADMIN_ACCESS.u && password === ADMIN_ACCESS.p) {
+                    isAdmin = true;
+                    AdminManager.hideLoginModal();
+                    AdminManager.showBackofficeModal();
+                    Utils.showNotification('Admin access granted!', 'success');
+                } else {
+                    Utils.showNotification('Invalid credentials!', 'error');
+                }
+            });
+            AdminManager._loginBound = true;
+        }
     },
     
     hideLoginModal: () => {
-        document.getElementById('adminLoginModal').style.display = 'none';
+        const modal = document.getElementById('adminLoginModal');
+        if (modal) modal.style.display = 'none';
     },
     
-    handleLogin: () => {
-        const username = document.getElementById('adminUsername').value;
-        const password = document.getElementById('adminPassword').value;
-        
-        if (username === ADMIN_ACCESS.u && password === ADMIN_ACCESS.p) {
-            isAdmin = true;
-            AdminManager.hideLoginModal();
-            document.getElementById('adminBackofficeModal').style.display = 'block';
-            Utils.showNotification('Access granted!', 'success');
-            AdminManager.refreshStats();
-            // Auto-refresh stats every 30s while open
-            if (AdminManager._statsInterval) clearInterval(AdminManager._statsInterval);
-            AdminManager._statsInterval = setInterval(() => {
-                const modal = document.getElementById('adminBackofficeModal');
-                if (modal && modal.style.display === 'block') {
-                    AdminManager.refreshStats();
-                } else {
-                    clearInterval(AdminManager._statsInterval);
-                    AdminManager._statsInterval = null;
-                }
-            }, 30000);
-        } else {
-            Utils.showNotification('Invalid credentials!', 'error');
-        }
+    showBackofficeModal: () => {
+        const modal = document.getElementById('adminBackofficeModal');
+        if (modal) modal.style.display = 'block';
+        AdminManager.refreshStats();
     },
     
     hideBackofficeModal: () => {
@@ -2158,7 +2162,7 @@ AdminManager.refreshStats = () => {
     set('statAds24h', ads24);
     set('statAdsAll', adsAll);
     
-    // Unique visitors via visit events
+    // Unique visitors
     const uv24 = Metrics.uniqueVisitorsSince(now - dayMs);
     const uv3m = Metrics.uniqueVisitorsSince(now - m3);
     const uv6m = Metrics.uniqueVisitorsSince(now - m6);
@@ -2197,22 +2201,30 @@ AdminManager.showManageAds = () => {
     const container = document.getElementById('adminDynamic');
     if (!container) return;
     container.style.display = 'block';
-    const ads = AdManager.load();
     container.innerHTML = `
-        <h3>Manage Ad Slots</h3>
-        <p>Paste ad code for each slot. It will render immediately in the UI.</p>
-        <form id="adsForm" class="form">
-            <div class="form-group"><label>Top Banner</label><textarea id="ad_top" rows="4" style="width:100%">${ads.top || ''}</textarea></div>
-            <div class="form-group"><label>Left Sidebar</label><textarea id="ad_left" rows="4" style="width:100%">${ads.left || ''}</textarea></div>
-            <div class="form-group"><label>Right Sidebar</label><textarea id="ad_right" rows="4" style="width:100%">${ads.right || ''}</textarea></div>
-            <div class="form-group"><label>Bottom Banner</label><textarea id="ad_bottom" rows="4" style="width:100%">${ads.bottom || ''}</textarea></div>
-            <button type="submit" class="btn btn-primary">Save Ads</button>
-        </form>
+        <h3>Ad Management</h3>
+        <div class="form-group">
+            <label>Top Ad:</label>
+            <textarea id="ad_top" placeholder="Enter HTML/JavaScript code...">${AdManager.load().top || ''}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Left Sidebar Ad:</label>
+            <textarea id="ad_left" placeholder="Enter HTML/JavaScript code...">${AdManager.load().left || ''}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Right Sidebar Ad:</label>
+            <textarea id="ad_right" placeholder="Enter HTML/JavaScript code...">${AdManager.load().right || ''}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Bottom Ad:</label>
+            <textarea id="ad_bottom" placeholder="Enter HTML/JavaScript code...">${AdManager.load().bottom || ''}</textarea>
+        </div>
+        <button id="saveAdsBtn" class="btn btn-primary">Save Ads</button>
     `;
-    const form = document.getElementById('adsForm');
-    if (form) {
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
+    
+    const saveBtn = document.getElementById('saveAdsBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
             const data = {
                 top: document.getElementById('ad_top').value,
                 left: document.getElementById('ad_left').value,
@@ -2230,36 +2242,30 @@ AdminManager.showHeaderCodes = () => {
     const container = document.getElementById('adminDynamic');
     if (!container) return;
     container.style.display = 'block';
-    const key = 'rcb_header_codes';
-    let saved = '';
-    try { saved = localStorage.getItem(key) || ''; } catch { saved = ''; }
     container.innerHTML = `
         <h3>Header Verification Codes</h3>
-        <p>Paste verification meta tags or scripts required by ad networks (AdSense, Adsterra, Monetag, etc.). These will be injected into the page <head> on load to verify ownership.</p>
-        <form id="headerCodesForm">
-            <div class="form-group">
-                <label for="headerCodes">Head Snippets</label>
-                <textarea id="headerCodes" rows="8" style="width:100%">${saved}</textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Save & Inject</button>
-        </form>
+        <div class="form-group">
+            <label>Header Codes (Google Analytics, etc.):</label>
+            <textarea id="headerCodes" placeholder="Paste your header verification codes here...">${localStorage.getItem('rcb_header_codes') || ''}</textarea>
+        </div>
+        <button id="saveHeaderCodesBtn" class="btn btn-primary">Save Codes</button>
     `;
-    const form = document.getElementById('headerCodesForm');
-    if (form) form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const txt = document.getElementById('headerCodes').value;
-        localStorage.setItem(key, txt);
-        AdminManager.injectHeaderCodes();
-        Utils.showNotification('Header codes saved and injected.', 'success');
-    });
+    
+    const saveBtn = document.getElementById('saveHeaderCodesBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            const key = 'rcb_header_codes';
+            const txt = document.getElementById('headerCodes').value;
+            localStorage.setItem(key, txt);
+            AdminManager.injectHeaderCodes();
+            Utils.showNotification('Header codes saved and injected.', 'success');
+        });
+    }
 };
 
 AdminManager.injectHeaderCodes = () => {
     const key = 'rcb_header_codes';
-    let txt = '';
-    try { txt = localStorage.getItem(key) || ''; } catch { txt = ''; }
-    if (!txt) return;
-    // Remove previous injection container if exists
+    const txt = localStorage.getItem(key) || '';
     let holder = document.getElementById('rcb-header-inject');
     if (holder) holder.remove();
     holder = document.createElement('div');
@@ -2275,13 +2281,18 @@ AdminManager.showSiteConfig = () => {
     container.style.display = 'block';
     container.innerHTML = `
         <h3>Site Configuration</h3>
-        <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
-            <span>Theme:</span>
-            <button id="themeLight" class="btn btn-outline">Light</button>
-            <button id="themeDark" class="btn btn-outline">Dark</button>
+        <div class="form-group">
+            <label>Quick Theme Switch:</label>
+            <div class="theme-buttons">
+                <button id="themeLight" class="btn btn-secondary">Light Theme</button>
+                <button id="themeDark" class="btn btn-secondary">Dark Theme</button>
+            </div>
         </div>
-        <button id="resetLocalBtn" class="btn btn-warning">Reset Local Data</button>
+        <div class="form-group">
+            <button id="resetLocalBtn" class="btn btn-danger">Reset Local Data</button>
+        </div>
     `;
+    
     const themeLight = document.getElementById('themeLight');
     const themeDark = document.getElementById('themeDark');
     const resetBtn = document.getElementById('resetLocalBtn');
@@ -2294,25 +2305,26 @@ AdminManager.showUserMgmt = () => {
     const container = document.getElementById('adminDynamic');
     if (!container) return;
     container.style.display = 'block';
-    const name = NameManager.getName();
     container.innerHTML = `
         <h3>User Management</h3>
-        <p>Current device display name: <strong>${name || '(none)'}</strong></p>
         <div class="form-group">
-            <label for="newName">Change Display Name</label>
-            <input id="newName" type="text" maxlength="20" value="${name || ''}" />
+            <label>Update Display Name:</label>
+            <input type="text" id="updateNameInput" placeholder="Enter new display name..." value="${NameManager.getName()}">
+            <button id="updateNameBtn" class="btn btn-primary">Update Name</button>
         </div>
-        <button id="saveNameBtn" class="btn btn-primary">Save Name</button>
     `;
-    const saveNameBtn = document.getElementById('saveNameBtn');
-    if (saveNameBtn) saveNameBtn.addEventListener('click', () => {
-        const input = document.getElementById('newName');
-        if (input && input.value.trim()) {
-            NameManager.setName(input.value);
-            UIManager.updateDisplayName();
-            Utils.showNotification('Display name updated.', 'success');
-        }
-    });
+    
+    const updateBtn = document.getElementById('updateNameBtn');
+    if (updateBtn) {
+        updateBtn.addEventListener('click', () => {
+            const input = document.getElementById('updateNameInput');
+            if (input && input.value.trim()) {
+                NameManager.setName(input.value);
+                UIManager.updateDisplayName();
+                Utils.showNotification('Display name updated.', 'success');
+            }
+        });
+    }
 };
 
 // Premium Splash Screen Manager
@@ -2323,10 +2335,10 @@ const SplashManager = {
     tipInterval: null,
     
     tips: [
-        'Loading game assets...',
-        'Initializing chat system...',
-        'Setting up gaming hub...',
-        'Preparing multiplayer features...',
+        'Loading chat system...',
+        'Initializing messaging...',
+        'Setting up user interface...',
+        'Preparing chat features...',
         'Loading theme preferences...',
         'Optimizing performance...',
         'Almost ready...'
@@ -2336,6 +2348,7 @@ const SplashManager = {
         // Set up event listeners
         const enterBtn = document.getElementById('enterBtn');
         const skipBtn = document.getElementById('skipBtn');
+        
         
         if (enterBtn) {
             enterBtn.addEventListener('click', SplashManager.enterApp);
@@ -2350,6 +2363,7 @@ const SplashManager = {
     },
     
     startLoading: () => {
+        
         // Simulate realistic loading progress
         const loadingSteps = [
             { progress: 15, tip: 0, delay: 800 },
@@ -2470,7 +2484,14 @@ const SplashManager = {
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize metrics first
+    Metrics.load();
+    
+    // Initialize UI components
+    UIManager.init();
+    
     ChatManager.init();
+    EmojiManager.init();
     GameManager.init();
     AdminManager.init();
     AdStats.initImpressions();
@@ -2479,14 +2500,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Enhanced splash screen with premium loading experience
     SplashManager.init();
     
-    // Update user count (simulate)
-    setInterval(() => {
-        const connectedUsers = Math.floor(Math.random() * 50) + 10;
-            const userCountEl = document.getElementById('userCount');
-            const userCountEl2 = document.getElementById('userCount2');
-            if (userCountEl) userCountEl.textContent = `Users: ${connectedUsers}`;
-            if (userCountEl2) userCountEl2.textContent = `Users: ${connectedUsers}`;
-    }, 5000);
+    // User count is now handled by ChatSync.updateUserPresence()
     
     Utils.showNotification('RevChattyBox loaded successfully!', 'success');
 });

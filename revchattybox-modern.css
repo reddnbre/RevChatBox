@@ -439,6 +439,155 @@ html[data-theme="light"] .chat-container {
   box-shadow:0 4px 15px rgba(0,0,0,.1);
 }
 
+/* New message format with sender names */
+.message-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:6px;
+}
+
+.sender-name{
+  font-weight:600;
+  color:var(--accent-1);
+  font-size:12px;
+}
+
+.message.user .sender-name{
+  color:#fff;
+}
+
+.message-content{
+  color:var(--text);
+  line-height:1.4;
+  word-wrap:break-word;
+}
+
+.message.user .message-content{
+  color:#fff;
+}
+
+/* Emoji Picker Styles */
+.btn-emoji {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.btn-emoji:hover {
+  background: var(--accent-1);
+  transform: scale(1.05);
+}
+
+.emoji-picker {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  z-index: 10000;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.emoji-picker-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--glass-bg-dark);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 500px;
+  box-shadow: var(--glass-shadow);
+}
+
+.emoji-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border);
+}
+
+.emoji-picker-header h3 {
+  color: var(--text);
+  margin: 0;
+  font-size: 18px;
+}
+
+.emoji-picker-header .close {
+  color: var(--muted);
+  font-size: 24px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.emoji-picker-header .close:hover {
+  color: var(--text);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+  max-height: 350px;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.emoji-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.emoji-btn:hover {
+  background: var(--accent-1);
+  transform: scale(1.1);
+  border-color: var(--accent-1);
+}
+
+/* Light theme emoji picker */
+html[data-theme="light"] .emoji-picker-content {
+  background: var(--glass-bg-light);
+}
+
+html[data-theme="light"] .btn-emoji {
+  background: var(--glass-bg-light);
+  border-color: var(--glass-border);
+}
+
+html[data-theme="light"] .emoji-btn {
+  border-color: var(--glass-border);
+}
+
+html[data-theme="light"] .emoji-btn:hover {
+  background: var(--accent-1);
+  border-color: var(--accent-1);
+}
+
 .message-time{
   font-size:10px;
   opacity:.65;
@@ -641,6 +790,7 @@ html[data-theme="light"] .modal-content {
 }
 
 /* ---------- GAME STYLES ---------- */
+/* ---------- GAME STYLES ---------- */
 .game-list{
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));
@@ -677,31 +827,402 @@ html[data-theme="light"] .modal-content {
   font-size:13px;
 }
 
-.game-grid-3x3{
-  display:grid;
-  grid-template-columns:repeat(3, 80px);
-  grid-template-rows:repeat(3, 80px);
-  gap:4px;
-  margin:20px auto;
-  background:var(--bg);
-  padding:4px;
-  border-radius:8px;
+/* Hangman Styles */
+.hangman-game {
+  text-align: center;
+  padding: 20px;
 }
 
-.cell{
-  background:var(--panel);
-  border-radius:6px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:2rem;
-  color:var(--text);
-  cursor:pointer;
-  transition:all .2s ease;
+.hangman-display {
+  margin-bottom: 30px;
 }
 
-.cell:hover{
-  background:var(--border);
+.word-display {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--text);
+  margin-bottom: 20px;
+  letter-spacing: 0.2em;
+}
+
+.hangman-keyboard {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.key-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.key-btn:hover:not(:disabled) {
+  background: var(--accent-1);
+  color: white;
+}
+
+.key-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.key-btn.correct {
+  background: #28a745;
+  color: white;
+}
+
+.key-btn.wrong {
+  background: #dc3545;
+  color: white;
+}
+
+.game-info p {
+  margin: 5px 0;
+  color: var(--muted);
+}
+
+/* Connect 4 Styles */
+.connect4-game {
+  text-align: center;
+  padding: 20px;
+}
+
+.connect4-board-container {
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.connect4-board {
+  display: grid;
+  grid-template-columns: repeat(7, 60px);
+  grid-template-rows: repeat(6, 60px);
+  gap: 4px;
+  background: var(--bg);
+  padding: 8px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+}
+
+.connect4-cell {
+  background: var(--panel);
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.connect4-cell:hover {
+  background: var(--accent-1);
+  opacity: 0.7;
+}
+
+.connect4-cell.player1::after {
+  content: '🔴';
+  font-size: 24px;
+}
+
+.connect4-cell.player2::after {
+  content: '🟡';
+  font-size: 24px;
+}
+
+/* War Game Styles */
+.war-game {
+  text-align: center;
+  padding: 20px;
+}
+
+.war-header h3 {
+  color: var(--accent-1);
+  margin-bottom: 10px;
+}
+
+.war-play-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 30px 0;
+  gap: 20px;
+}
+
+.player-area {
+  flex: 1;
+}
+
+.player-label {
+  font-weight: bold;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.card-pile {
+  width: 80px;
+  height: 120px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.center-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.card-comparison {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.card-display {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.card {
+  width: 60px;
+  height: 90px;
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.card-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--text);
+}
+
+.card-suit {
+  font-size: 24px;
+  color: var(--accent-1);
+}
+
+.vs {
+  font-weight: bold;
+  color: var(--accent-1);
+  font-size: 18px;
+}
+
+.round-result {
+  font-weight: bold;
+  color: var(--text);
+}
+
+.war-stats {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.stat span:first-child {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.stat span:last-child {
+  color: var(--text);
+  font-weight: bold;
+  font-size: 18px;
+}
+
+/* Battleship Styles */
+.battleship-setup, .battleship-game {
+  text-align: center;
+  padding: 20px;
+}
+
+.setup-header h3 {
+  color: var(--accent-1);
+  margin-bottom: 10px;
+}
+
+.setup-controls {
+  margin: 20px 0;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 30px);
+  grid-template-rows: repeat(10, 30px);
+  gap: 2px;
+  margin: 20px auto;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+}
+
+.cell {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.cell:hover {
+  background: var(--accent-1);
+  opacity: 0.7;
+}
+
+.cell.ship {
+  background: var(--accent-1);
+  color: white;
+}
+
+.cell.hit {
+  background: #dc3545;
+  color: white;
+}
+
+.cell.miss {
+  background: #6c757d;
+  color: white;
+}
+
+.ships-progress {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.ship-status {
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.ship-status.pending {
+  background: var(--panel);
+  color: var(--muted);
+}
+
+.ship-status.current {
+  background: var(--accent-1);
+  color: white;
+}
+
+.ship-status.placed {
+  background: #28a745;
+  color: white;
+}
+
+.game-boards {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.board-section {
+  text-align: center;
+}
+
+.board-section h4 {
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.game-info {
+  text-align: center;
+}
+
+.current-turn h4 {
+  color: var(--accent-1);
+}
+
+/* Game Over Screen */
+.game-over-screen {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.game-over-screen h2 {
+  color: var(--accent-1);
+  margin-bottom: 20px;
+  font-size: 2rem;
+}
+
+.final-result, .score-summary {
+  margin: 20px 0;
+  color: var(--text);
+}
+
+.final-result p, .score-summary div {
+  margin: 8px 0;
+  font-size: 16px;
+}
+
+.game-actions {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.game-mode-selection {
+  text-align: center;
+  padding: 20px;
+}
+
+.mode-buttons {
+  margin: 20px 0;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.mode-description {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 15px;
 }
 
 /* FORMS */
@@ -1118,6 +1639,7 @@ html[data-theme="light"] .modal-content{
   box-shadow: 0 30px 100px rgba(0,0,0,.12);
 }
 
+
 html[data-theme="light"] .game-item {
   background:
     linear-gradient(135deg, rgba(249,115,22,.08) 0%, transparent 100%),
@@ -1153,9 +1675,6 @@ html[data-theme="light"] .form-group textarea {
     var(--glass-bg-light);
 }
 
-html[data-theme="light"] .cell:hover{
-  background: rgba(0,0,0,.06);
-}
 
 html[data-theme="light"] .ad-banner.top-ad::before,
 html[data-theme="light"] .ad-banner.side-ad::before,
