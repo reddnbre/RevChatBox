@@ -338,22 +338,16 @@ CREATE POLICY "Anyone can insert messages" ON messages
     FOR INSERT WITH CHECK (true);
 */
 
-// Initialize Supabase client (with safety check)
-let supabase = null;
-
-// Wait for Supabase to load, then initialize
-function initSupabase() {
+// Initialize Supabase client properly
+function createSupabaseClient() {
     if (window.supabase) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('Supabase client initialized');
-    } else {
-        console.warn('Supabase not loaded yet, retrying...');
-        setTimeout(initSupabase, 100);
+        return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
+    return null;
 }
 
-// Start initialization
-initSupabase();
+// Initialize Supabase client
+const supabase = createSupabaseClient();
 
 // Real-time Chat System with Supabase
 const SupabaseChat = {
