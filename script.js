@@ -307,155 +307,94 @@ const Metrics = {
     recordVisit: () => Metrics.addEvent('visit', { name: NameManager.getName() || 'anon' })
 };
 
-// Real-time Chat Sync System
-const ChatSync = {
-    CHAT_KEY: 'rcb_global_chat',
-    USERS_KEY: 'rcb_online_users',
-    SYNC_INTERVAL: 1000, // Check for new messages every second
+// Simple Chat System
+const SimpleChat = {
+    CHAT_KEY: 'rcb_chat_messages',
     
-    // Generate unique user ID
-    getUserId: () => {
-        let userId = localStorage.getItem('rcb_user_id');
-        if (!userId) {
-            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('rcb_user_id', userId);
-        }
-        return userId;
-    },
-    
-    // Get user's display name
-    getUserName: () => {
-        return NameManager.getName() || 'Anonymous';
-    },
-    
-    // Send message to global chat
-    sendMessage: (message) => {
-        console.log('ChatSync.sendMessage called with:', message);
-        const messages = ChatSync.getMessages();
-        const newMessage = {
-            id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-            text: message,
-            sender: ChatSync.getUserName(),
-            userId: ChatSync.getUserId(),
-            timestamp: Date.now(),
-            type: 'user'
-        };
+    // Add a message to chat
+    addMessage: (text, sender = 'user') => {
+        console.log('SimpleChat.addMessage called:', text, sender);
         
-        console.log('New message object:', newMessage);
-        messages.push(newMessage);
-        
-        // Keep only last 200 messages
-        if (messages.length > 200) {
-            messages.splice(0, messages.length - 200);
-        }
-        
-        localStorage.setItem(ChatSync.CHAT_KEY, JSON.stringify(messages));
-        
-        // Update online users
-        ChatSync.updateUserPresence();
-    },
-    
-    // Get all messages
-    getMessages: () => {
-        try {
-            return JSON.parse(localStorage.getItem(ChatSync.CHAT_KEY) || '[]');
-        } catch {
-            return [];
-        }
-    },
-    
-    // Update user presence
-    updateUserPresence: () => {
-        const users = ChatSync.getOnlineUsers();
-        const currentUser = {
-            id: ChatSync.getUserId(),
-            name: ChatSync.getUserName(),
-            lastSeen: Date.now()
-        };
-        
-        // Update or add current user
-        const existingIndex = users.findIndex(u => u.id === currentUser.id);
-        if (existingIndex >= 0) {
-            users[existingIndex] = currentUser;
-        } else {
-            users.push(currentUser);
-        }
-        
-        // Remove users who haven't been seen for 5 minutes
-        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-        const activeUsers = users.filter(u => u.lastSeen > fiveMinutesAgo);
-        
-        localStorage.setItem(ChatSync.USERS_KEY, JSON.stringify(activeUsers));
-        ChatSync.updateUserCount(activeUsers.length);
-    },
-    
-    // Get online users
-    getOnlineUsers: () => {
-        try {
-            return JSON.parse(localStorage.getItem(ChatSync.USERS_KEY) || '[]');
-        } catch {
-            return [];
-        }
-    },
-    
-    // Update user count display
-    updateUserCount: (count) => {
-        const userCountEl = document.getElementById('userCount');
-        if (userCountEl) {
-            userCountEl.innerHTML = `<span class="dot"></span><span>Users: ${count}</span>`;
-        }
-    },
-    
-    // Check for new messages and update chat
-    syncMessages: () => {
-        const messages = ChatSync.getMessages();
-        const chatMessages = document.getElementById('chatMessages');
-        
-        if (!chatMessages) return;
-        
-        // Get current message count
-        const currentMessageCount = chatMessages.children.length;
-        
-        // If we have new messages, reload the chat
-        if (messages.length !== currentMessageCount) {
-            ChatSync.displayAllMessages(messages);
-        }
-        
-        // Update user presence
-        ChatSync.updateUserPresence();
-    },
-    
-    // Display all messages
-    displayAllMessages: (messages) => {
-        console.log('ChatSync.displayAllMessages called with:', messages.length, 'messages');
         const chatMessages = document.getElementById('chatMessages');
         if (!chatMessages) {
             console.error('chatMessages element not found!');
             return;
         }
         
-        // Filter messages from last 8 hours
-        const eightHoursAgo = Date.now() - (8 * 60 * 60 * 1000);
-        const recentMessages = messages.filter(msg => msg.timestamp > eightHoursAgo);
+        // Create message element
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
         
-        console.log('Recent messages:', recentMessages.length);
+        const time = Utils.formatTime(new Date());
+        const senderName = sender === 'user' ? (NameManager.getName() || 'Anonymous') : 'Bot';
+        
+        messageDiv.innerHTML = `
+            <div class="message-header">
+                <span class="sender-name">${Utils.escapeHtml(senderName)}</span>
+                <span class="message-time">${time}</span>
+            </div>
+            <div class="message-content">${Utils.escapeHtml(text)}</div>
+        `;
+        
+        // Add to chat
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Save to localStorage for persistence
+        SimpleChat.saveMessage(text, sender, time);
+        
+        console.log('Message added to chat');
+    },
+    
+    // Save message to localStorage
+    saveMessage: (text, sender, time) => {
+        const messages = SimpleChat.getMessages();
+        messages.push({ text, sender, time, timestamp: Date.now() });
+        
+        // Keep only last 50 messages
+        if (messages.length > 50) {
+            messages.splice(0, messages.length - 50);
+        }
+        
+        localStorage.setItem(SimpleChat.CHAT_KEY, JSON.stringify(messages));
+    },
+    
+    // Get saved messages
+    getMessages: () => {
+        try {
+            return JSON.parse(localStorage.getItem(SimpleChat.CHAT_KEY) || '[]');
+        } catch {
+            return [];
+        }
+    },
+    
+    // Load saved messages
+    loadMessages: () => {
+        const messages = SimpleChat.getMessages();
+        const chatMessages = document.getElementById('chatMessages');
+        
+        if (!chatMessages) return;
+        
+        // Clear existing messages except system message
+        const systemMessage = chatMessages.querySelector('.system-message');
         chatMessages.innerHTML = '';
+        if (systemMessage) {
+            chatMessages.appendChild(systemMessage);
+        }
         
-        recentMessages.forEach(msgData => {
+        // Add saved messages
+        messages.forEach(msg => {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${msgData.type}`;
-            messageDiv.setAttribute('data-timestamp', msgData.timestamp);
-            messageDiv.setAttribute('data-message-id', msgData.id);
+            messageDiv.className = `message ${msg.sender}`;
             
-            const time = Utils.formatTime(new Date(msgData.timestamp));
-            const senderName = msgData.type === 'user' ? msgData.sender : 'Bot';
+            const senderName = msg.sender === 'user' ? (NameManager.getName() || 'Anonymous') : 'Bot';
             
             messageDiv.innerHTML = `
                 <div class="message-header">
                     <span class="sender-name">${Utils.escapeHtml(senderName)}</span>
-                    <span class="message-time">${time}</span>
+                    <span class="message-time">${msg.time}</span>
                 </div>
-                <div class="message-content">${Utils.escapeHtml(msgData.text)}</div>
+                <div class="message-content">${Utils.escapeHtml(msg.text)}</div>
             `;
             
             chatMessages.appendChild(messageDiv);
@@ -464,83 +403,14 @@ const ChatSync = {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     },
     
-    // Start sync interval
-    startSync: () => {
-        ChatSync.updateUserPresence();
-        ChatSync.syncMessages();
+    // Initialize chat
+    init: () => {
+        console.log('SimpleChat initialized');
+        SimpleChat.loadMessages();
         
-        // Set up periodic sync
-        setInterval(ChatSync.syncMessages, ChatSync.SYNC_INTERVAL);
-        
-        // Initial message load
-        setTimeout(() => {
-            const messages = ChatSync.getMessages();
-            console.log('Initial messages loaded:', messages.length);
-            ChatSync.displayAllMessages(messages);
-            
-            // Add a test message if no messages exist
-            if (messages.length === 0) {
-                console.log('No messages found, adding test message');
-                ChatSync.sendMessage('Chat system is working! 🎉');
-            }
-        }, 500);
-        
-        // Add welcome message for new users
-        setTimeout(() => {
-            const messages = ChatSync.getMessages();
-            const hasWelcomeMessage = messages.some(msg => msg.text.includes('Welcome to RevChattyBox'));
-            
-            if (!hasWelcomeMessage) {
-                const welcomeMessage = {
-                    id: 'welcome_' + Date.now(),
-                    text: 'Welcome to RevChattyBox! 🎉 Start chatting with other users!',
-                    sender: 'System',
-                    userId: 'system',
-                    timestamp: Date.now(),
-                    type: 'bot'
-                };
-                
-                messages.unshift(welcomeMessage);
-                localStorage.setItem(ChatSync.CHAT_KEY, JSON.stringify(messages));
-                ChatSync.displayAllMessages(messages);
-            }
-        }, 1000);
-        
-        // Add test message functionality (for development)
-        window.testChat = () => {
-            const testMessages = [
-                'Testing the chat system! 📱',
-                'This is a test message from ' + ChatSync.getUserName(),
-                'Multi-user chat is working! 🎉',
-                'Can you see this message? 👀'
-            ];
-            
-            const randomMessage = testMessages[Math.floor(Math.random() * testMessages.length)];
-            ChatSync.sendMessage(randomMessage);
-            
-            console.log('Test message sent:', randomMessage);
-            console.log('Current users online:', ChatSync.getOnlineUsers().length);
-        };
-        
-        // Add manual send test
-        window.manualSend = (text) => {
-            console.log('Manual send called with:', text);
-            ChatSync.sendMessage(text || 'Manual test message');
-        };
-        
-        // Add display test
-        window.testDisplay = () => {
-            console.log('Testing message display...');
-            const messages = ChatSync.getMessages();
-            console.log('Current messages:', messages);
-            ChatSync.displayAllMessages(messages);
-        };
-        
-        // Log chat system status
-        console.log('ChatSync initialized');
-        console.log('User ID:', ChatSync.getUserId());
-        console.log('Display Name:', ChatSync.getUserName());
-        console.log('Online users:', ChatSync.getOnlineUsers().length);
+        // Add test functions
+        window.testChat = () => SimpleChat.addMessage('Test message! 🎉', 'user');
+        window.addBotMessage = (text) => SimpleChat.addMessage(text, 'bot');
     }
 };
 
@@ -677,8 +547,8 @@ const ChatManager = {
         }
         if (pmBtn) pmBtn.addEventListener('click', PMManager.showModal);
         
-        // Start the real-time chat sync system
-        ChatSync.startSync();
+        // Start the simple chat system
+        SimpleChat.init();
     },
     
     sendMessage: () => {
@@ -691,8 +561,9 @@ const ChatManager = {
         
         if (message && message.length <= 500) {
             console.log('Sending message:', message);
-            // Send to global chat
-            ChatSync.sendMessage(message);
+            
+            // Add user message
+            SimpleChat.addMessage(message, 'user');
             messageInput.value = '';
             
             // Clear input focus
@@ -709,25 +580,8 @@ const ChatManager = {
                 ];
                 const randomBotMessage = botMessages[Math.floor(Math.random() * botMessages.length)];
                 
-                // Add bot message to global chat
-                const messages = ChatSync.getMessages();
-                const botMessage = {
-                    id: Date.now() + '_bot_' + Math.random().toString(36).substr(2, 9),
-                    text: randomBotMessage,
-                    sender: 'ChatBot',
-                    userId: 'bot',
-                    timestamp: Date.now(),
-                    type: 'bot'
-                };
-                
-                messages.push(botMessage);
-                
-                // Keep only last 200 messages
-                if (messages.length > 200) {
-                    messages.splice(0, messages.length - 200);
-                }
-                
-                localStorage.setItem(ChatSync.CHAT_KEY, JSON.stringify(messages));
+                // Add bot message
+                SimpleChat.addMessage(randomBotMessage, 'bot');
             }, 1500 + Math.random() * 2000); // Random delay between 1.5-3.5 seconds
         }
     },
@@ -2500,7 +2354,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Enhanced splash screen with premium loading experience
     SplashManager.init();
     
-    // User count is now handled by ChatSync.updateUserPresence()
+    // Update user count (simple simulation)
+    setInterval(() => {
+        const connectedUsers = Math.floor(Math.random() * 10) + 2;
+        const userCountEl = document.getElementById('userCount');
+        if (userCountEl) userCountEl.innerHTML = `<span class="dot"></span><span>Users: ${connectedUsers}</span>`;
+    }, 5000);
     
     Utils.showNotification('RevChattyBox loaded successfully!', 'success');
 });
