@@ -307,14 +307,74 @@ const Metrics = {
     recordVisit: () => Metrics.addEvent('visit', { name: NameManager.getName() || 'anon' })
 };
 
-// Simple Chat System
-const SimpleChat = {
-    CHAT_KEY: 'rcb_chat_messages',
-    
-    // Add a message to chat
-    addMessage: (text, sender = 'user') => {
-        console.log('SimpleChat.addMessage called:', text, sender);
+// Supabase Configuration
+// To set up Supabase for real-time messaging:
+// 1. Go to https://supabase.com and create a new project
+// 2. In your Supabase dashboard, go to Settings > API
+// 3. Copy your Project URL and anon public key
+// 4. Replace the values below:
+const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with your Supabase URL
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your Supabase anon key
+
+// 5. In Supabase SQL Editor, run this SQL to create the messages table:
+/*
+CREATE TABLE messages (
+    id BIGSERIAL PRIMARY KEY,
+    text TEXT NOT NULL,
+    sender TEXT NOT NULL,
+    sender_name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- Create policy to allow anyone to read messages
+CREATE POLICY "Anyone can read messages" ON messages
+    FOR SELECT USING (true);
+
+-- Create policy to allow anyone to insert messages
+CREATE POLICY "Anyone can insert messages" ON messages
+    FOR INSERT WITH CHECK (true);
+*/
+
+// Initialize Supabase client
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Real-time Chat System with Supabase
+const SupabaseChat = {
+    // Send a message to Supabase
+    async sendMessage(text, sender = 'user') {
+        console.log('SupabaseChat.sendMessage called:', text, sender);
         
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .insert([
+                    {
+                        text: text,
+                        sender: sender,
+                        sender_name: sender === 'user' ? (NameManager.getName() || 'Anonymous') : 'Bot',
+                        created_at: new Date().toISOString()
+                    }
+                ]);
+            
+            if (error) {
+                console.error('Error sending message:', error);
+                // Fallback to local storage if Supabase fails
+                this.addMessageToUI(text, sender);
+            } else {
+                console.log('Message sent to Supabase successfully');
+            }
+        } catch (err) {
+            console.error('Supabase connection error:', err);
+            // Fallback to local storage if Supabase is not configured
+            this.addMessageToUI(text, sender);
+        }
+    },
+    
+    // Add message to UI (for display)
+    addMessageToUI(text, sender = 'user') {
         const chatMessages = document.getElementById('chatMessages');
         if (!chatMessages) {
             console.error('chatMessages element not found!');
@@ -339,78 +399,100 @@ const SimpleChat = {
         // Add to chat
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
-        
-        // Save to localStorage for persistence
-        SimpleChat.saveMessage(text, sender, time);
-        
-        console.log('Message added to chat');
     },
     
-    // Save message to localStorage
-    saveMessage: (text, sender, time) => {
-        const messages = SimpleChat.getMessages();
-        messages.push({ text, sender, time, timestamp: Date.now() });
-        
-        // Keep only last 50 messages
-        if (messages.length > 50) {
-            messages.splice(0, messages.length - 50);
-        }
-        
-        localStorage.setItem(SimpleChat.CHAT_KEY, JSON.stringify(messages));
-    },
-    
-    // Get saved messages
-    getMessages: () => {
+    // Load messages from Supabase
+    async loadMessages() {
         try {
-            return JSON.parse(localStorage.getItem(SimpleChat.CHAT_KEY) || '[]');
-        } catch {
-            return [];
+            const { data: messages, error } = await supabase
+                .from('messages')
+                .select('*')
+                .order('created_at', { ascending: true })
+                .limit(50);
+            
+            if (error) {
+                console.error('Error loading messages:', error);
+                return;
+            }
+            
+            const chatMessages = document.getElementById('chatMessages');
+            if (!chatMessages) return;
+            
+            // Clear existing messages except system message
+            const systemMessage = chatMessages.querySelector('.system-message');
+            chatMessages.innerHTML = '';
+            if (systemMessage) {
+                chatMessages.appendChild(systemMessage);
+            }
+            
+            // Add messages to UI
+            messages.forEach(msg => {
+                this.addMessageToUI(msg.text, msg.sender);
+            });
+            
+        } catch (err) {
+            console.error('Supabase connection error:', err);
         }
     },
     
-    // Load saved messages
-    loadMessages: () => {
-        const messages = SimpleChat.getMessages();
-        const chatMessages = document.getElementById('chatMessages');
-        
-        if (!chatMessages) return;
-        
-        // Clear existing messages except system message
-        const systemMessage = chatMessages.querySelector('.system-message');
-        chatMessages.innerHTML = '';
-        if (systemMessage) {
-            chatMessages.appendChild(systemMessage);
+    // Set up real-time subscription
+    async setupRealtimeSubscription() {
+        try {
+            const channel = supabase
+                .channel('messages')
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'messages' },
+                    (payload) => {
+                        console.log('New message received:', payload.new);
+                        this.addMessageToUI(payload.new.text, payload.new.sender);
+                    }
+                )
+                .subscribe();
+            
+            console.log('Real-time subscription set up');
+        } catch (err) {
+            console.error('Error setting up real-time subscription:', err);
         }
-        
-        // Add saved messages
-        messages.forEach(msg => {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${msg.sender}`;
-            
-            const senderName = msg.sender === 'user' ? (NameManager.getName() || 'Anonymous') : 'Bot';
-            
-            messageDiv.innerHTML = `
-                <div class="message-header">
-                    <span class="sender-name">${Utils.escapeHtml(senderName)}</span>
-                    <span class="message-time">${msg.time}</span>
-                </div>
-                <div class="message-content">${Utils.escapeHtml(msg.text)}</div>
-            `;
-            
-            chatMessages.appendChild(messageDiv);
-        });
-        
-        chatMessages.scrollTop = chatMessages.scrollHeight;
     },
     
-    // Initialize chat
-    init: () => {
-        console.log('SimpleChat initialized');
-        SimpleChat.loadMessages();
+    // Initialize chat system
+    async init() {
+        console.log('SupabaseChat initializing...');
+        
+        // Check if Supabase is configured
+        if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+            console.warn('Supabase not configured, using fallback local chat');
+            this.initFallbackChat();
+            return;
+        }
+        
+        try {
+            // Load existing messages
+            await this.loadMessages();
+            
+            // Set up real-time subscription
+            await this.setupRealtimeSubscription();
+            
+            console.log('SupabaseChat initialized successfully');
+        } catch (err) {
+            console.error('Error initializing SupabaseChat:', err);
+            this.initFallbackChat();
+        }
         
         // Add test functions
-        window.testChat = () => SimpleChat.addMessage('Test message! 🎉', 'user');
-        window.addBotMessage = (text) => SimpleChat.addMessage(text, 'bot');
+        window.testChat = () => this.sendMessage('Test message! 🎉', 'user');
+        window.addBotMessage = (text) => this.sendMessage(text, 'bot');
+    },
+    
+    // Fallback to simple local chat if Supabase fails
+    initFallbackChat() {
+        console.log('Using fallback local chat system');
+        
+        // Simple local storage fallback
+        this.addMessageToUI('Chat system is working! 🎉', 'bot');
+        
+        window.testChat = () => this.addMessageToUI('Test message! 🎉', 'user');
+        window.addBotMessage = (text) => this.addMessageToUI(text, 'bot');
     }
 };
 
@@ -547,8 +629,8 @@ const ChatManager = {
         }
         if (pmBtn) pmBtn.addEventListener('click', PMManager.showModal);
         
-        // Start the simple chat system
-        SimpleChat.init();
+        // Start the Supabase chat system
+        SupabaseChat.init();
     },
     
     sendMessage: () => {
@@ -563,7 +645,7 @@ const ChatManager = {
             console.log('Sending message:', message);
             
             // Add user message
-            SimpleChat.addMessage(message, 'user');
+            SupabaseChat.sendMessage(message, 'user');
             messageInput.value = '';
             
             // Clear input focus
@@ -581,7 +663,7 @@ const ChatManager = {
                 const randomBotMessage = botMessages[Math.floor(Math.random() * botMessages.length)];
                 
                 // Add bot message
-                SimpleChat.addMessage(randomBotMessage, 'bot');
+                SupabaseChat.sendMessage(randomBotMessage, 'bot');
             }, 1500 + Math.random() * 2000); // Random delay between 1.5-3.5 seconds
         }
     },
