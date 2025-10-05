@@ -339,7 +339,7 @@ CREATE POLICY "Anyone can insert messages" ON messages
 */
 
 // Initialize Supabase client
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Real-time Chat System with Supabase
 const SupabaseChat = {
