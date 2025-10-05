@@ -313,8 +313,8 @@ const Metrics = {
 // 2. In your Supabase dashboard, go to Settings > API
 // 3. Copy your Project URL and anon public key
 // 4. Replace the values below:
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with your Supabase URL
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your Supabase anon key
+const SUPABASE_URL = 'https://oysutzfurpgictdgxuzj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95c3V0emZ1cnBnaWN0ZGd4dXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMzU4MjIsImV4cCI6MjA3MzgxMTgyMn0.n7mC5MaOQOD9UTJuugWnkEq4Nu-EMHOluAXYQnOwrQg';
 
 // 5. In Supabase SQL Editor, run this SQL to create the messages table:
 /*
