@@ -190,173 +190,233 @@
     </div>
   </div>
 
-  <!-- Firebase Real-time Chat System -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-    import {
-      getFirestore, collection, addDoc, serverTimestamp,
-      onSnapshot, orderBy, query, limit, getDocs
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+  <!-- Socket.IO Real-time Chat System -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // Socket.IO Chat System
+    class SocketChat {
+      constructor() {
+        this.socket = io();
+        this.currentRoom = this.getRoomFromURL() || 'global';
+        this.isConnected = false;
+        this.init();
+      }
 
-    // 🔥 REPLACE THIS WITH YOUR REAL FIREBASE CONFIG
-    // Get this from: Firebase Console → Project Settings → Your Apps → Web App
-    const firebaseConfig = {
-      apiKey: "REPLACE_WITH_YOUR_API_KEY",
-      authDomain: "your-project-id.firebaseapp.com",
-      projectId: "your-project-id",
-      storageBucket: "your-project-id.appspot.com",
-      messagingSenderId: "your-sender-id",
-      appId: "your-app-id"
-    };
+      init() {
+        console.log('🚀 Initializing Socket.IO chat...');
+        this.setupElements();
+        this.setupSocketEvents();
+        this.setupEventListeners();
+        this.joinRoom(this.currentRoom);
+      }
 
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+      getRoomFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('room');
+      }
 
-    // Chat room setup
-    const msgCol = collection(db, "messages");
-    const msgQuery = query(msgCol, orderBy("timestamp", "asc"), limit(100));
+      setupElements() {
+        this.$messages = document.getElementById("chatMessages");
+        this.$input = document.getElementById("messageInput");
+        this.$name = document.getElementById("displayNameInput");
+        this.$status = document.getElementById("status");
+        this.$sendBtn = document.getElementById("sendBtn");
 
-    // UI elements
-    const $messages = document.getElementById("chatMessages");
-    const $input = document.getElementById("messageInput");
-    const $name = document.getElementById("displayNameInput");
-    const $status = document.getElementById("status");
-    const $sendBtn = document.getElementById("sendBtn");
+        // Name persistence
+        this.$name.value = localStorage.getItem("revchat_name") || "";
+      }
 
-    // Name persistence
-    $name.value = localStorage.getItem("revchat_name") || "";
+      setupSocketEvents() {
+        // Connection events
+        this.socket.on('connect', () => {
+          console.log('✅ Connected to server');
+          this.isConnected = true;
+          this.updateStatus('online', 'green');
+          this.joinRoom(this.currentRoom);
+        });
 
-    // Test Firebase connection
-    console.log("🔥 Testing Firebase connection...");
-    
-    // Quick write test
-    try {
-      const testRef = await addDoc(collection(db, "test"), { 
-        message: "Firebase test", 
-        timestamp: serverTimestamp() 
-      });
-      console.log("✅ Firebase connected successfully!");
-      $status.textContent = "online";
-    } catch (error) {
-      console.error("❌ Firebase connection failed:", error);
-      $status.textContent = "offline";
-      $status.style.color = "red";
-      
-      // Show setup instructions
-      const setupDiv = document.createElement("div");
-      setupDiv.innerHTML = `
-        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 10px; border-radius: 8px;">
-          <h3>🔥 Firebase Setup Required</h3>
-          <p>To enable real-time chat, you need to:</p>
-          <ol>
-            <li>Go to <a href="https://firebase.google.com" target="_blank">Firebase Console</a></li>
-            <li>Create a new project</li>
-            <li>Enable Firestore Database</li>
-            <li>Add a web app and copy the config</li>
-            <li>Replace the firebaseConfig in this file</li>
-          </ol>
-          <p><strong>Need help?</strong> Open <a href="firebase-setup.html" target="_blank">firebase-setup.html</a> for detailed instructions.</p>
-        </div>
-      `;
-      $messages.appendChild(setupDiv);
-    }
+        this.socket.on('disconnect', () => {
+          console.log('❌ Disconnected from server');
+          this.isConnected = false;
+          this.updateStatus('offline', 'red');
+        });
 
-    // Live message stream
-    onSnapshot(msgQuery, (snap) => {
-      $status.textContent = "online";
-      $status.style.color = "green";
-      
-      // Keep system message, clear others
-      const systemMsg = $messages.querySelector('.system-message');
-      $messages.innerHTML = "";
-      if (systemMsg) $messages.appendChild(systemMsg);
-      
-      snap.forEach(doc => {
-        const d = doc.data();
+        // Chat events
+        this.socket.on('history', (messages) => {
+          this.displayHistory(messages);
+        });
+
+        this.socket.on('chat:message', (message) => {
+          this.displayMessage(message);
+        });
+
+        this.socket.on('system', (message) => {
+          this.displaySystemMessage(message);
+        });
+
+        this.socket.on('typing', (data) => {
+          this.showTyping(data.name);
+        });
+
+        this.socket.on('user_count', (count) => {
+          this.updateUserCount(count);
+        });
+      }
+
+      setupEventListeners() {
+        // Send button
+        this.$sendBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          this.sendMessage();
+        });
+
+        // Enter key
+        this.$input.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            this.sendMessage();
+          }
+        });
+
+        // Typing indicator
+        let typingTimer;
+        this.$input.addEventListener("input", () => {
+          if (this.isConnected) {
+            this.socket.emit("typing");
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+              this.hideTyping();
+            }, 1500);
+          }
+        });
+
+        // Name change
+        this.$name.addEventListener("change", () => {
+          localStorage.setItem("revchat_name", this.$name.value.trim());
+          if (this.isConnected) {
+            this.joinRoom(this.currentRoom);
+          }
+        });
+      }
+
+      joinRoom(room) {
+        if (!this.isConnected) return;
+        
+        const name = this.$name.value.trim() || "Anonymous";
+        console.log(`Joining room: ${room} as ${name}`);
+        this.socket.emit("join", { room, name });
+        this.currentRoom = room;
+      }
+
+      sendMessage() {
+        const text = this.$input.value.trim();
+        if (!text || !this.isConnected) return;
+
+        this.socket.emit("chat:message", { text });
+        this.$input.value = "";
+      }
+
+      displayHistory(messages) {
+        // Keep system message, clear others
+        const systemMsg = this.$messages.querySelector('.system-message');
+        this.$messages.innerHTML = "";
+        if (systemMsg) this.$messages.appendChild(systemMsg);
+        
+        messages.forEach(message => {
+          if (message.type === 'system') {
+            this.displaySystemMessage(message);
+          } else {
+            this.displayMessage(message);
+          }
+        });
+        
+        this.$messages.scrollTop = this.$messages.scrollHeight;
+      }
+
+      displayMessage(message) {
         const div = document.createElement("div");
-        const mine = (d.name || "") === (localStorage.getItem("revchat_name") || "");
-        div.className = `message ${mine ? "user" : "other"}`;
+        const isMine = message.id === this.socket.id;
+        div.className = `message ${isMine ? "user" : "other"}`;
         
         const header = document.createElement("div");
         header.className = "message-header";
         
         const senderName = document.createElement("span");
         senderName.className = "sender-name";
-        senderName.textContent = d.name || "Anonymous";
+        senderName.textContent = message.name || "Anonymous";
         
         const time = document.createElement("span");
         time.className = "message-time";
-        const when = d.timestamp?.toDate ? d.timestamp.toDate() : new Date();
-        time.textContent = when.toLocaleTimeString();
+        time.textContent = new Date(message.ts).toLocaleTimeString();
         
         header.appendChild(senderName);
         header.appendChild(time);
         
         const content = document.createElement("div");
         content.className = "message-content";
-        content.textContent = d.text || "";
+        content.textContent = message.text || "";
         
         div.appendChild(header);
         div.appendChild(content);
-        $messages.appendChild(div);
-        $messages.scrollTop = $messages.scrollHeight;
-      });
-    }, (err) => {
-      $status.textContent = "offline";
-      $status.style.color = "red";
-      console.error("Firebase error:", err);
-    });
-
-    // Send message
-    $sendBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      await sendMessage();
-    });
-
-    // Enter key support
-    $input.addEventListener("keypress", async (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        await sendMessage();
+        
+        // Keep system message at top
+        const systemMsg = this.$messages.querySelector('.system-message');
+        if (systemMsg && systemMsg.nextSibling) {
+          this.$messages.insertBefore(div, systemMsg.nextSibling);
+        } else {
+          this.$messages.appendChild(div);
+        }
+        
+        this.$messages.scrollTop = this.$messages.scrollHeight;
       }
-    });
 
-    // Name change
-    $name.addEventListener("change", () => {
-      localStorage.setItem("revchat_name", $name.value.trim());
-    });
-
-    async function sendMessage() {
-      const text = $input.value.trim();
-      if (!text) return;
-
-      const name = ($name.value || "Anonymous").slice(0, 24);
-      
-      try {
-        await addDoc(msgCol, { 
-          name, 
-          text, 
-          timestamp: serverTimestamp() 
-        });
-        $input.value = "";
-      } catch (error) {
-        console.error("Error sending message:", error);
-        // Fallback: show message locally
+      displaySystemMessage(message) {
         const div = document.createElement("div");
-        div.className = "message user";
-        div.innerHTML = `
-          <div class="message-header">
-            <span class="sender-name">${name}</span>
-            <span class="message-time">${new Date().toLocaleTimeString()}</span>
-          </div>
-          <div class="message-content">${text} (sent locally - Firebase offline)</div>
-        `;
-        $messages.appendChild(div);
-        $messages.scrollTop = $messages.scrollHeight;
-        $input.value = "";
+        div.className = "message system";
+        
+        const content = document.createElement("div");
+        content.className = "message-content";
+        content.textContent = message.text || "";
+        
+        div.appendChild(content);
+        
+        // Keep system message at top
+        const systemMsg = this.$messages.querySelector('.system-message');
+        if (systemMsg && systemMsg.nextSibling) {
+          this.$messages.insertBefore(div, systemMsg.nextSibling);
+        } else {
+          this.$messages.appendChild(div);
+        }
+        
+        this.$messages.scrollTop = this.$messages.scrollHeight;
+      }
+
+      showTyping(name) {
+        // Simple typing indicator - you can enhance this
+        console.log(`${name} is typing...`);
+      }
+
+      hideTyping() {
+        // Hide typing indicator
+      }
+
+      updateStatus(status, color) {
+        this.$status.textContent = status;
+        this.$status.style.color = color || 'inherit';
+      }
+
+      updateUserCount(count) {
+        const userCountElement = document.querySelector('.pill.users span:last-child');
+        if (userCountElement) {
+          userCountElement.textContent = `Users: ${count}`;
+        }
       }
     }
+
+    // Initialize chat when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      window.socketChat = new SocketChat();
+    });
   </script>
 
   <!-- Load the rest of the app -->
