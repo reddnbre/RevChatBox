@@ -190,181 +190,173 @@
     </div>
   </div>
 
-  <!-- Simple Local Chat System -->
-  <script>
-    // Simple working chat system
-    class SimpleChat {
-      constructor() {
-        this.messages = [];
-        this.init();
-      }
+  <!-- Firebase Real-time Chat System -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import {
+      getFirestore, collection, addDoc, serverTimestamp,
+      onSnapshot, orderBy, query, limit, getDocs
+    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-      init() {
-        console.log('SimpleChat initialized');
-        this.setupElements();
-        this.setupEventListeners();
-        this.loadMessages();
-        this.updateStatus();
-      }
+    // 🔥 REPLACE THIS WITH YOUR REAL FIREBASE CONFIG
+    // Get this from: Firebase Console → Project Settings → Your Apps → Web App
+    const firebaseConfig = {
+      apiKey: "REPLACE_WITH_YOUR_API_KEY",
+      authDomain: "your-project-id.firebaseapp.com",
+      projectId: "your-project-id",
+      storageBucket: "your-project-id.appspot.com",
+      messagingSenderId: "your-sender-id",
+      appId: "your-app-id"
+    };
 
-      setupElements() {
-        this.$messages = document.getElementById("chatMessages");
-        this.$input = document.getElementById("messageInput");
-        this.$name = document.getElementById("displayNameInput");
-        this.$status = document.getElementById("status");
-        this.$sendBtn = document.getElementById("sendBtn");
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        // Name persistence
-        this.$name.value = localStorage.getItem("revchat_name") || "";
-      }
+    // Chat room setup
+    const msgCol = collection(db, "messages");
+    const msgQuery = query(msgCol, orderBy("timestamp", "asc"), limit(100));
 
-      setupEventListeners() {
-        // Name change
-        this.$name.addEventListener("change", () => {
-          localStorage.setItem("revchat_name", this.$name.value.trim());
-        });
+    // UI elements
+    const $messages = document.getElementById("chatMessages");
+    const $input = document.getElementById("messageInput");
+    const $name = document.getElementById("displayNameInput");
+    const $status = document.getElementById("status");
+    const $sendBtn = document.getElementById("sendBtn");
 
-        // Send button
-        this.$sendBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-          this.sendMessage();
-        });
+    // Name persistence
+    $name.value = localStorage.getItem("revchat_name") || "";
 
-        // Enter key
-        this.$input.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            this.sendMessage();
-          }
-        });
-      }
+    // Test Firebase connection
+    console.log("🔥 Testing Firebase connection...");
+    
+    // Quick write test
+    try {
+      const testRef = await addDoc(collection(db, "test"), { 
+        message: "Firebase test", 
+        timestamp: serverTimestamp() 
+      });
+      console.log("✅ Firebase connected successfully!");
+      $status.textContent = "online";
+    } catch (error) {
+      console.error("❌ Firebase connection failed:", error);
+      $status.textContent = "offline";
+      $status.style.color = "red";
+      
+      // Show setup instructions
+      const setupDiv = document.createElement("div");
+      setupDiv.innerHTML = `
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 10px; border-radius: 8px;">
+          <h3>🔥 Firebase Setup Required</h3>
+          <p>To enable real-time chat, you need to:</p>
+          <ol>
+            <li>Go to <a href="https://firebase.google.com" target="_blank">Firebase Console</a></li>
+            <li>Create a new project</li>
+            <li>Enable Firestore Database</li>
+            <li>Add a web app and copy the config</li>
+            <li>Replace the firebaseConfig in this file</li>
+          </ol>
+          <p><strong>Need help?</strong> Open <a href="firebase-setup.html" target="_blank">firebase-setup.html</a> for detailed instructions.</p>
+        </div>
+      `;
+      $messages.appendChild(setupDiv);
+    }
 
-      sendMessage() {
-        const text = this.$input.value.trim();
-        if (!text) return;
-
-        const name = (this.$name.value || "Anonymous").slice(0, 24);
-        const message = {
-          id: Date.now(),
-          text: text,
-          name: name,
-          timestamp: new Date()
-        };
-
-        // Add to local array
-        this.messages.push(message);
-        
-        // Save to localStorage
-        this.saveMessages();
-        
-        // Display message
-        this.displayMessage(message);
-        
-        // Clear input
-        this.$input.value = "";
-
-        // Add bot response
-        setTimeout(() => {
-          const botMessages = [
-            "Thanks for your message! 🎉",
-            "Cool! 👍",
-            "Nice one!",
-            "I see what you mean!",
-            "Interesting point!",
-            "Great to hear from you!",
-            "Awesome! 🚀"
-          ];
-          const randomBotMessage = botMessages[Math.floor(Math.random() * botMessages.length)];
-          
-          const botMessage = {
-            id: Date.now() + 1,
-            text: randomBotMessage,
-            name: "ChatBot",
-            timestamp: new Date()
-          };
-
-          this.messages.push(botMessage);
-          this.saveMessages();
-          this.displayMessage(botMessage);
-        }, 1500 + Math.random() * 2000);
-      }
-
-      displayMessage(message) {
+    // Live message stream
+    onSnapshot(msgQuery, (snap) => {
+      $status.textContent = "online";
+      $status.style.color = "green";
+      
+      // Keep system message, clear others
+      const systemMsg = $messages.querySelector('.system-message');
+      $messages.innerHTML = "";
+      if (systemMsg) $messages.appendChild(systemMsg);
+      
+      snap.forEach(doc => {
+        const d = doc.data();
         const div = document.createElement("div");
-        const isUser = message.name !== "ChatBot";
-        div.className = `message ${isUser ? "user" : "bot"}`;
+        const mine = (d.name || "") === (localStorage.getItem("revchat_name") || "");
+        div.className = `message ${mine ? "user" : "other"}`;
         
         const header = document.createElement("div");
         header.className = "message-header";
         
         const senderName = document.createElement("span");
         senderName.className = "sender-name";
-        senderName.textContent = message.name;
+        senderName.textContent = d.name || "Anonymous";
         
         const time = document.createElement("span");
         time.className = "message-time";
-        time.textContent = message.timestamp.toLocaleTimeString();
+        const when = d.timestamp?.toDate ? d.timestamp.toDate() : new Date();
+        time.textContent = when.toLocaleTimeString();
         
         header.appendChild(senderName);
         header.appendChild(time);
         
         const content = document.createElement("div");
         content.className = "message-content";
-        content.textContent = message.text;
+        content.textContent = d.text || "";
         
         div.appendChild(header);
         div.appendChild(content);
-        
-        // Keep system message at top
-        const systemMsg = this.$messages.querySelector('.system-message');
-        if (systemMsg && systemMsg.nextSibling) {
-          this.$messages.insertBefore(div, systemMsg.nextSibling);
-        } else {
-          this.$messages.appendChild(div);
-        }
-        
-        this.$messages.scrollTop = this.$messages.scrollHeight;
-      }
+        $messages.appendChild(div);
+        $messages.scrollTop = $messages.scrollHeight;
+      });
+    }, (err) => {
+      $status.textContent = "offline";
+      $status.style.color = "red";
+      console.error("Firebase error:", err);
+    });
 
-      loadMessages() {
-        try {
-          const saved = localStorage.getItem("revchat_messages");
-          if (saved) {
-            this.messages = JSON.parse(saved);
-            
-            // Clear existing messages except system message
-            const systemMsg = this.$messages.querySelector('.system-message');
-            this.$messages.innerHTML = "";
-            if (systemMsg) this.$messages.appendChild(systemMsg);
-            
-            // Display all messages
-            this.messages.forEach(msg => {
-              msg.timestamp = new Date(msg.timestamp);
-              this.displayMessage(msg);
-            });
-          }
-        } catch (err) {
-          console.error("Error loading messages:", err);
-        }
-      }
+    // Send message
+    $sendBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      await sendMessage();
+    });
 
-      saveMessages() {
-        // Keep only last 100 messages
-        if (this.messages.length > 100) {
-          this.messages = this.messages.slice(-100);
-        }
-        localStorage.setItem("revchat_messages", JSON.stringify(this.messages));
+    // Enter key support
+    $input.addEventListener("keypress", async (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        await sendMessage();
       }
+    });
 
-      updateStatus() {
-        this.$status.textContent = "online";
+    // Name change
+    $name.addEventListener("change", () => {
+      localStorage.setItem("revchat_name", $name.value.trim());
+    });
+
+    async function sendMessage() {
+      const text = $input.value.trim();
+      if (!text) return;
+
+      const name = ($name.value || "Anonymous").slice(0, 24);
+      
+      try {
+        await addDoc(msgCol, { 
+          name, 
+          text, 
+          timestamp: serverTimestamp() 
+        });
+        $input.value = "";
+      } catch (error) {
+        console.error("Error sending message:", error);
+        // Fallback: show message locally
+        const div = document.createElement("div");
+        div.className = "message user";
+        div.innerHTML = `
+          <div class="message-header">
+            <span class="sender-name">${name}</span>
+            <span class="message-time">${new Date().toLocaleTimeString()}</span>
+          </div>
+          <div class="message-content">${text} (sent locally - Firebase offline)</div>
+        `;
+        $messages.appendChild(div);
+        $messages.scrollTop = $messages.scrollHeight;
+        $input.value = "";
       }
     }
-
-    // Initialize chat when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      window.chat = new SimpleChat();
-    });
   </script>
 
   <!-- Load the rest of the app -->
