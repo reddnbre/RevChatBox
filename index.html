@@ -1,319 +1,301 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RevChattyBox - Gaming Chat Hub</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Sora:wght@500;600;800&display=swap" rel="stylesheet">
-    <!-- <link rel="stylesheet" href="styles.css"> -->
-    <!-- <link rel="stylesheet" href="revchattybox-skin.css"> -->
-    <!-- <link rel="stylesheet" href="rev-skin.css"> -->
-    <!-- <link rel="stylesheet" href="revchattybox-ads-typography.css"> -->
-    <!-- <link rel="stylesheet" href="revchattybox-ads-typography-v2.css"> -->
-    <!-- <link rel="stylesheet" href="revchattybox-header-layout-fix.css"> -->
-    <link rel="stylesheet" href="revchattybox-modern.css">
+  <meta charset="utf-8" />
+  <title>RevChattyBox - Gaming Chat Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="revchattybox-modern.css">
 </head>
 <body class="rev-skin">
-    <!-- Cookie Consent Banner -->
-    <div id="cookieBanner" class="cookie-banner">
-        <div class="cookie-content">
-            <div class="cookie-text">
-                <span class="cookie-icon">🍪</span>
-                <p>We use cookies to save your preferences, theme settings, and game progress. By continuing to use RevChattyBox, you consent to the storage of this data on your device.</p>
-            </div>
-            <div class="cookie-actions">
-                <button id="cookieAccept" class="btn btn-primary">Accept</button>
-                <button id="cookieDecline" class="btn btn-secondary">Decline</button>
-            </div>
-        </div>
+  <!-- Cookie Consent Banner -->
+  <div id="cookieBanner" class="cookie-banner">
+    <div class="cookie-content">
+      <div class="cookie-text">
+        <p>🍪 We use cookies to save your preferences and chat history. By continuing, you agree to our use of cookies.</p>
+      </div>
+      <div class="cookie-actions">
+        <button id="cookieAccept" class="btn btn-primary">Accept</button>
+        <button id="cookieDecline" class="btn btn-secondary">Decline</button>
+      </div>
     </div>
+  </div>
 
-    <!-- Gaming Splash / Loading Page -->
-    <div id="splash" class="splash">
-        <!-- Animated background blobs -->
-        <div class="splash-bg">
-            <div class="blob blob-1"></div>
-            <div class="blob blob-2"></div>
-            <div class="blob blob-3"></div>
-        </div>
-        
-        <!-- Main glassmorphism card -->
-        <div class="splash-card glass">
-            <!-- Header section -->
-            <div class="splash-header">
-                <div class="logo">
-                    <span class="grad">🎮 RevChattyBox</span>
-                </div>
-                <div class="tagline">Premium Gaming Chat Hub</div>
-                <div class="subtitle">Experience the future of gaming communication</div>
-            </div>
-            
-            <!-- Progress section -->
-            <div class="progress-section">
-                <div class="progress-header">
-                    <span class="status-text" id="statusText">Initializing...</span>
-                    <span class="progress-percent" id="progressPercent">0%</span>
-                </div>
-                <div class="progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Loading progress">
-                    <div class="progress-bar" id="progressBar"></div>
-                </div>
-                <div class="progress-tips" id="progressTips">
-                    <span class="tip">Loading game assets...</span>
-                </div>
-            </div>
-            
-            <!-- Action buttons -->
-            <div class="splash-actions">
-                <button id="enterBtn" class="btn btn-primary" disabled>
-                    <span class="btn-text">Enter Gaming Hub</span>
-                    <span class="btn-icon">🚀</span>
-                </button>
-                <button id="skipBtn" class="btn btn-secondary">
-                    <span class="btn-text">Skip Loading</span>
-                </button>
-            </div>
-        </div>
+  <!-- Splash Screen -->
+  <div id="splash" class="splash">
+    <div class="splash-bg">
+      <div class="blob"></div>
+      <div class="blob"></div>
+      <div class="blob"></div>
     </div>
-    <!-- Header: ONLY the top ad banner -->
-    <header class="header" role="banner">
-        <div class="ad-banner top-ad ad-top">
-          <div class="ad-placeholder">Ad Space — Top Banner</div>
+    <div class="splash-card">
+      <div class="splash-header">
+        <div class="logo">🎮 RevChattyBox</div>
+        <p class="tagline">Your Ultimate Gaming Chat Hub</p>
+      </div>
+      
+      <div class="progress-section">
+        <div class="progress-track">
+          <div class="progress-bar" id="progressBar"></div>
         </div>
+        <div class="progress-info">
+          <span class="status-text" id="statusText">Initializing...</span>
+          <span class="progress-percent" id="progressPercent">0%</span>
+        </div>
+      </div>
+      
+      <div class="progress-tips" id="progressTips">
+        <div class="tip">🎯 Loading gaming features...</div>
+        <div class="tip">🎨 Applying premium themes...</div>
+        <div class="tip">🔧 Setting up chat system...</div>
+        <div class="tip">🎮 Preparing game hub...</div>
+        <div class="tip">⚡ Optimizing performance...</div>
+        <div class="tip">🚀 Almost ready...</div>
+        <div class="tip">✨ Welcome to RevChattyBox!</div>
+      </div>
+      
+      <div class="splash-actions">
+        <button id="enterBtn" class="btn btn-primary">Enter App</button>
+        <button id="skipBtn" class="btn btn-secondary">Skip Loading</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application -->
+  <div id="app" class="app" style="display: none;">
+    <!-- Top Ad Banner -->
+    <header class="header">
+      <div class="ad-banner top-ad ad-top">
+        <div class="ad-placeholder">Ad Space - Top Banner</div>
+      </div>
     </header>
 
-    <div class="main-container">
-        <!-- Left Sidebar with Ad -->
-        <aside class="sidebar left-sidebar ad-side">
-            <div class="ad-banner side-ad">
-                <div class="ad-placeholder">Ad Space - Left Sidebar</div>
-            </div>
-        </aside>
+    <!-- Main Layout -->
+    <div class="main-layout">
+      <!-- Left Sidebar with Ad -->
+      <aside class="sidebar left-sidebar ad-side">
+        <div class="ad-banner side-ad ad-left">
+          <div class="ad-placeholder">Ad Space - Left Sidebar</div>
+        </div>
+      </aside>
 
-        <!-- Main Chat Area -->
-        <main class="chat-container">
-            <div class="chat-header">
-                <div class="brand">
-                    <h1 class="title">🎮 RevChattyBox</h1>
-                </div>
-                <div class="bar-spacer"></div>
-                <div class="actions">
-                    <span id="displayName" class="display-name"></span>
-                    <span id="userCount" class="pill users"><span class="dot"></span><span>Users: 0</span></span>
-                    <button id="gameHubBtn" class="btn">Game Hub</button>
-                    <button id="themeToggleBtn" class="btn" aria-label="Toggle theme">🌙</button>
-                    <button id="pmBtn" class="btn ghost" aria-label="Private Message">PM</button>
-                </div>
+      <!-- Main Chat Area -->
+      <main class="main-content">
+        <div class="chat-container">
+          <div class="chat-header">
+            <h1>🎮 RevChattyBox</h1>
+            <div class="header-actions">
+              <span id="displayName" class="display-name"></span>
+              <span id="userCount" class="pill users"><span class="dot"></span><span id="status">offline</span></span>
+              <button id="gameHubBtn" class="btn">Game Hub</button>
+              <button id="themeToggleBtn" class="btn" aria-label="Toggle theme">🌙</button>
+              <button id="pmBtn" class="btn ghost" aria-label="Private Message">PM</button>
             </div>
-            
-            <div id="chatMessages" class="chat-messages messages">
-                <div class="system-message">
-                    Welcome to RevChattyBox! Your gaming chat hub.
-                </div>
+          </div>
+          
+          <div class="chat-messages" id="chatMessages">
+            <div class="system-message">
+              Welcome to RevChattyBox! Your gaming chat hub.
             </div>
-            <div class="composer-bar">
-                <div class="composer ibox">
-                    <input type="text" id="messageInput" placeholder="Type your message..." maxlength="500">
-                    <button id="emojiBtn" class="btn btn-emoji" title="Add Emoji">😊</button>
-                    <button id="sendBtn" class="btn btn-primary send">Send</button>
-                </div>
+          </div>
+          
+          <div class="composer-bar">
+            <div class="composer ibox">
+              <input type="text" id="messageInput" placeholder="Type your message..." maxlength="500">
+              <button id="emojiBtn" class="btn btn-emoji" title="Add Emoji">😊</button>
+              <button id="sendBtn" class="btn btn-primary send">Send</button>
             </div>
-        </main>
+          </div>
+        </div>
+      </main>
 
-        <!-- Right Sidebar with Ad -->
-        <aside class="sidebar right-sidebar ad-side">
-            <div class="ad-banner side-ad">
-                <div class="ad-placeholder">Ad Space - Right Sidebar</div>
-            </div>
-        </aside>
+      <!-- Right Sidebar with Ad -->
+      <aside class="sidebar right-sidebar ad-side">
+        <div class="ad-banner side-ad ad-right">
+          <div class="ad-placeholder">Ad Space - Right Sidebar</div>
+        </div>
+      </aside>
     </div>
 
     <!-- Bottom Ad Banner -->
     <footer class="footer">
-        <div class="ad-banner bottom-ad ad-bottom">
-            <div class="ad-placeholder">Ad Space - Bottom Banner</div>
-        </div>
+      <div class="ad-banner bottom-ad ad-bottom">
+        <div class="ad-placeholder">Ad Space - Bottom Banner</div>
+      </div>
     </footer>
+  </div>
 
-    <!-- Game Hub Modal -->
-    <div id="gameHubModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🎮 Game Hub</h2>
-                <span class="close" onclick="GameManager.hideGameHub()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div id="gameList" class="game-list">
-                    <!-- Games will be loaded here -->
-                </div>
-            </div>
-        </div>
+  <!-- Name Entry Modal -->
+  <div id="nameEntryModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Welcome to RevChattyBox!</h2>
+      </div>
+      <div class="modal-body">
+        <form id="nameEntryForm">
+          <div class="form-group">
+            <label for="displayNameInput">Enter your display name:</label>
+            <input type="text" id="displayNameInput" placeholder="Your name..." maxlength="20" required>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Continue</button>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 
-    <!-- Game Modal -->
-    <div id="gameModal" class="modal">
-        <div class="modal-content game-modal">
-            <div class="modal-header">
-                <h2 id="gameTitle">Game</h2>
-                <span class="close" onclick="GameManager.hideGameModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div id="gameStatus" class="game-status">
-                    <!-- Game status will be shown here -->
-                </div>
-                <div id="gameContainer" class="game-container">
-                    <!-- Game content will be loaded here -->
-                </div>
-            </div>
+  <!-- Game Hub Modal -->
+  <div id="gameHubModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🎮 Game Hub</h2>
+        <span class="close" onclick="GameManager.hideGameHub()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div id="gameList" class="game-list">
+          <!-- Games will be loaded here -->
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Emoji Picker Modal -->
-    <div id="emojiPicker" class="emoji-picker">
-        <div class="emoji-picker-content">
-            <div class="emoji-picker-header">
-                <h3>Choose an Emoji</h3>
-                <span class="close" onclick="EmojiManager.hidePicker()">&times;</span>
-            </div>
-            <div class="emoji-grid">
-                <!-- Emojis will be populated by JavaScript -->
-            </div>
+  <!-- Game Modal -->
+  <div id="gameModal" class="modal">
+    <div class="modal-content game-modal">
+      <div class="modal-header">
+        <h2 id="gameTitle">Game</h2>
+        <span class="close" onclick="GameManager.hideGameModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div id="gameStatus" class="game-status">
+          <!-- Game status will be shown here -->
         </div>
-    </div>
-
-    <!-- Admin Login Modal -->
-    <div id="adminLoginModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🔐 Admin Login</h2>
-                <span class="close" onclick="AdminManager.hideLoginModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="adminLoginForm">
-                    <div class="form-group">
-                        <label for="adminUsername">Username:</label>
-                        <input type="text" id="adminUsername" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="adminPassword">Password:</label>
-                        <input type="password" id="adminPassword" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Login</button>
-                </form>
-            </div>
+        <div id="gameContainer" class="game-container">
+          <!-- Game content will be loaded here -->
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Admin Backoffice Modal -->
-    <div id="adminBackofficeModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>⚙️ Admin Backoffice</h2>
-                <span class="close" onclick="AdminManager.hideBackofficeModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="admin-section">
-                    <h3>Site Analytics</h3>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-title">Games Played (24h)</div>
-                            <div id="statGames24h" class="stat-value">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-title">Games Played (All Time)</div>
-                            <div id="statGamesAll" class="stat-value">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-title">Ad Impressions (24h)</div>
-                            <div id="statAds24h" class="stat-value">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-title">Ad Impressions (All Time)</div>
-                            <div id="statAdsAll" class="stat-value">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-title">Unique Visitors (24h)</div>
-                            <div id="statUV24h" class="stat-value">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-title">Unique Visitors (3 mo)</div>
-                            <div id="statUV3m" class="stat-value">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-title">Unique Visitors (6 mo)</div>
-                            <div id="statUV6m" class="stat-value">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-title">Unique Visitors (1 yr)</div>
-                            <div id="statUV1y" class="stat-value">0</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="admin-section">
-                    <h3>Ad Management</h3>
-                    <div class="ad-controls">
-                        <button id="manageAdsBtn" class="btn btn-primary">Manage Ads</button>
-                        <button id="headerCodesBtn" class="btn btn-secondary">Header Verification Codes</button>
-                    </div>
-                </div>
-                <div class="admin-section">
-                    <h3>Site Settings</h3>
-                    <div class="settings-controls">
-                        <button id="siteConfigBtn" class="btn btn-info">Site Configuration</button>
-                        <button id="userMgmtBtn" class="btn btn-warning">User Management</button>
-                    </div>
-                </div>
-                <div id="adminDynamic" class="admin-section" style="display:none;"></div>
-            </div>
-        </div>
+  <!-- Emoji Picker Modal -->
+  <div id="emojiPicker" class="emoji-picker">
+    <div class="emoji-picker-content">
+      <div class="emoji-picker-header">
+        <h3>Choose an Emoji</h3>
+        <span class="close" onclick="EmojiManager.hidePicker()">&times;</span>
+      </div>
+      <div class="emoji-grid">
+        <!-- Emojis will be populated by JavaScript -->
+      </div>
     </div>
+  </div>
 
-    <!-- Name Entry Modal -->
-    <div id="nameEntryModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Welcome to RevChattyBox</h2>
-                <span class="close" onclick="NameManager.hideModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <p>Enter a display name for chat and games. This is saved on your device.</p>
-                <form id="nameEntryForm">
-                    <div class="form-group">
-                        <label for="displayNameInput">Display Name</label>
-                        <input type="text" id="displayNameInput" maxlength="20" placeholder="e.g. PlayerOne" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Continue</button>
-                </form>
-            </div>
-        </div>
-    </div>
+  <!-- Firebase (modular CDN) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import {
+      getFirestore, collection, addDoc, serverTimestamp,
+      onSnapshot, orderBy, query, limit
+    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-    <!-- Private Message Modal -->
-    <div id="pmModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Private Message</h2>
-                <span class="close" onclick="PMManager.hideModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="pmForm">
-                    <div class="form-group">
-                        <label for="pmRecipient">Recipient</label>
-                        <input type="text" id="pmRecipient" placeholder="Enter recipient name" required />
-                    </div>
-                    <div class="form-group">
-                        <label for="pmText">Message</label>
-                        <input type="text" id="pmText" maxlength="300" placeholder="Type a private message..." required />
-                    </div>
-                    <button type="submit" class="btn btn-primary">Send</button>
-                </form>
-            </div>
-        </div>
-    </div>
+    // Firebase config - Replace with your actual config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBvOkBwqLqJ8H9vF2mN3pQ4rS5tU6vW7xY8z",
+      authDomain: "revchattybox.firebaseapp.com",
+      projectId: "revchattybox",
+      storageBucket: "revchattybox.appspot.com",
+      messagingSenderId: "123456789012",
+      appId: "1:123456789012:web:abcdef1234567890"
+    };
 
-    <!-- Supabase -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="script.js"></script>
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Chat room setup
+    const msgCol = collection(db, "rooms", "global", "messages");
+    const msgQuery = query(msgCol, orderBy("ts", "asc"), limit(500));
+
+    // UI elements
+    const $messages = document.getElementById("chatMessages");
+    const $form = document.getElementById("sendBtn").closest('.composer');
+    const $input = document.getElementById("messageInput");
+    const $name = document.getElementById("displayNameInput");
+    const $status = document.getElementById("status");
+
+    // Name persistence
+    $name.value = localStorage.getItem("revchat_name") || "";
+    $name.addEventListener("change", () => {
+      localStorage.setItem("revchat_name", $name.value.trim());
+    });
+
+    // Live message stream
+    onSnapshot(msgQuery, (snap) => {
+      $status.textContent = "online";
+      // Keep system message, clear others
+      const systemMsg = $messages.querySelector('.system-message');
+      $messages.innerHTML = "";
+      if (systemMsg) $messages.appendChild(systemMsg);
+      
+      snap.forEach(doc => {
+        const d = doc.data();
+        const div = document.createElement("div");
+        const mine = (d.name || "") === (localStorage.getItem("revchat_name") || "");
+        div.className = `message ${mine ? "user" : "bot"}`;
+        
+        const header = document.createElement("div");
+        header.className = "message-header";
+        
+        const senderName = document.createElement("span");
+        senderName.className = "sender-name";
+        senderName.textContent = d.name || "Anon";
+        
+        const time = document.createElement("span");
+        time.className = "message-time";
+        const when = d.ts?.toDate ? d.ts.toDate() : new Date();
+        time.textContent = when.toLocaleTimeString();
+        
+        header.appendChild(senderName);
+        header.appendChild(time);
+        
+        const content = document.createElement("div");
+        content.className = "message-content";
+        content.textContent = d.text || "";
+        
+        div.appendChild(header);
+        div.appendChild(content);
+        $messages.appendChild(div);
+        $messages.scrollTop = $messages.scrollHeight;
+      });
+    }, (err) => {
+      $status.textContent = "offline";
+      console.error("Firebase error:", err);
+    });
+
+    // Send message
+    document.getElementById("sendBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      const text = $input.value.trim();
+      if (!text) return;
+      const name = ($name.value || "Anon").slice(0, 24);
+      await addDoc(msgCol, { name, text, ts: serverTimestamp() });
+      $input.value = "";
+    });
+
+    // Enter key support
+    $input.addEventListener("keypress", async (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const text = $input.value.trim();
+        if (!text) return;
+        const name = ($name.value || "Anon").slice(0, 24);
+        await addDoc(msgCol, { name, text, ts: serverTimestamp() });
+        $input.value = "";
+      }
+    });
+  </script>
+
+  <!-- Load the rest of the app -->
+  <script src="script.js"></script>
 </body>
 </html>
